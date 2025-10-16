@@ -44,8 +44,8 @@ class PixelDogChaseGame:
         self.dog_y = self.GAME_HEIGHT / 2  # 狗的Y位置
         
         self.car_speed = 0  # 当前车速
-        self.dog_speed = 0.02  # 狗的速度（会逐渐增加）
-        self.base_dog_speed = 0.02
+        self.dog_speed = 0.04  # 狗的速度（会逐渐增加）- 加快
+        self.base_dog_speed = 0.04
         self.score = 0
         self.game_over = False
         self.game_time = 0
@@ -53,8 +53,8 @@ class PixelDogChaseGame:
         # 音频控制参数
         self.volume_threshold = 0.001  # 最小音量阈值
         self.max_volume = 0.15  # 最大音量
-        self.min_car_speed = 0.01  # 最小车速（安静时）
-        self.max_car_speed = 0.08  # 最大车速（大声时）
+        self.min_car_speed = 0.03  # 最小车速（安静时）- 加快
+        self.max_car_speed = 0.15  # 最大车速（大声时）- 加快
         
         # 像素风格色彩
         self.pixel_colors = {
@@ -243,17 +243,21 @@ class PixelDogChaseGame:
         )
     
     def create_pixel_dog(self):
-        """创建像素风格狗"""
-        # 8位风格狗的图案
+        """创建像素风格狗 - 改进版更可爱"""
+        # 8位风格狗的图案 - 更详细更可爱的设计
         dog_pattern = [
-            ['T', 'dog_brown', 'T', 'T', 'dog_brown', 'T'],  # 耳朵
-            ['dog_brown', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_brown'],  # 头部
-            ['dog_gold', 'black', 'dog_gold', 'dog_gold', 'black', 'dog_gold'],  # 眼睛
-            ['dog_gold', 'dog_gold', 'black', 'black', 'dog_gold', 'dog_gold'],  # 鼻子嘴巴
-            ['T', 'dog_gold', 'pink', 'pink', 'dog_gold', 'T'],  # 舌头
-            ['dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold'],  # 身体
-            ['dog_brown', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_brown'],
-            ['T', 'dog_brown', 'T', 'T', 'dog_brown', 'T'],  # 腿
+            ['T', 'T', 'dog_brown', 'dog_brown', 'dog_brown', 'dog_brown', 'T', 'T'],  # 耳朵顶部
+            ['T', 'dog_brown', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_brown', 'T'],  # 耳朵
+            ['dog_brown', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_brown'],  # 头部顶部
+            ['dog_gold', 'dog_gold', 'white', 'black', 'black', 'white', 'dog_gold', 'dog_gold'],  # 眼睛
+            ['dog_gold', 'dog_gold', 'dog_gold', 'black', 'black', 'dog_gold', 'dog_gold', 'dog_gold'],  # 鼻子
+            ['dog_gold', 'dog_gold', 'black', 'pink', 'pink', 'black', 'dog_gold', 'dog_gold'],  # 嘴巴
+            ['T', 'dog_gold', 'dog_gold', 'pink', 'pink', 'dog_gold', 'dog_gold', 'T'],  # 舌头
+            ['dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold'],  # 脖子
+            ['dog_gold', 'dog_brown', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_brown', 'dog_gold'],  # 身体上部
+            ['dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold'],  # 身体下部
+            ['T', 'dog_brown', 'T', 'dog_brown', 'dog_brown', 'T', 'dog_brown', 'T'],  # 四条腿
+            ['T', 'black', 'T', 'black', 'black', 'T', 'black', 'T'],  # 爪子
         ]
         
         self.dog_pixels = self.create_pixel_sprite(
@@ -381,7 +385,7 @@ class PixelDogChaseGame:
         
         # 更新狗的位置（狗会逐渐加速）
         self.game_time += 1
-        speed_increase = self.game_time * 0.00005  # 狗的加速度
+        speed_increase = self.game_time * 0.0001  # 狗的加速度 - 加快加速
         self.dog_speed = self.base_dog_speed + speed_increase
         self.dog_x += self.dog_speed
         
@@ -422,27 +426,36 @@ class PixelDogChaseGame:
         # 重新创建狗像素 - 根据时间添加动画效果
         # 每30帧切换一次狗的表情
         if (self.game_time // 30) % 2 == 0:
+            # 正常可爱表情
             dog_pattern = [
-                ['T', 'dog_brown', 'T', 'T', 'dog_brown', 'T'],  # 耳朵
-                ['dog_brown', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_brown'],  # 头部
-                ['dog_gold', 'black', 'dog_gold', 'dog_gold', 'black', 'dog_gold'],  # 眼睛
-                ['dog_gold', 'dog_gold', 'black', 'black', 'dog_gold', 'dog_gold'],  # 鼻子嘴巴
-                ['T', 'dog_gold', 'pink', 'pink', 'dog_gold', 'T'],  # 舌头
-                ['dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold'],  # 身体
-                ['dog_brown', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_brown'],
-                ['T', 'dog_brown', 'T', 'T', 'dog_brown', 'T'],  # 腿
+                ['T', 'T', 'dog_brown', 'dog_brown', 'dog_brown', 'dog_brown', 'T', 'T'],  # 耳朵顶部
+                ['T', 'dog_brown', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_brown', 'T'],  # 耳朵
+                ['dog_brown', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_brown'],  # 头部顶部
+                ['dog_gold', 'dog_gold', 'white', 'black', 'black', 'white', 'dog_gold', 'dog_gold'],  # 眼睛
+                ['dog_gold', 'dog_gold', 'dog_gold', 'black', 'black', 'dog_gold', 'dog_gold', 'dog_gold'],  # 鼻子
+                ['dog_gold', 'dog_gold', 'black', 'pink', 'pink', 'black', 'dog_gold', 'dog_gold'],  # 嘴巴
+                ['T', 'dog_gold', 'dog_gold', 'pink', 'pink', 'dog_gold', 'dog_gold', 'T'],  # 舌头
+                ['dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold'],  # 脖子
+                ['dog_gold', 'dog_brown', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_brown', 'dog_gold'],  # 身体上部
+                ['dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold'],  # 身体下部
+                ['T', 'dog_brown', 'T', 'dog_brown', 'dog_brown', 'T', 'dog_brown', 'T'],  # 四条腿
+                ['T', 'black', 'T', 'black', 'black', 'T', 'black', 'T'],  # 爪子
             ]
         else:
-            # 愤怒表情
+            # 兴奋追逐表情
             dog_pattern = [
-                ['T', 'dog_brown', 'T', 'T', 'dog_brown', 'T'],  # 耳朵
-                ['dog_brown', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_brown'],  # 头部
-                ['dog_gold', 'car_red', 'dog_gold', 'dog_gold', 'car_red', 'dog_gold'],  # 愤怒眼睛
-                ['dog_gold', 'dog_gold', 'black', 'black', 'dog_gold', 'dog_gold'],  # 鼻子嘴巴
-                ['T', 'dog_gold', 'car_red', 'car_red', 'dog_gold', 'T'],  # 愤怒舌头
-                ['dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold'],  # 身体
-                ['dog_brown', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_brown'],
-                ['T', 'dog_brown', 'T', 'T', 'dog_brown', 'T'],  # 腿
+                ['T', 'T', 'dog_brown', 'dog_brown', 'dog_brown', 'dog_brown', 'T', 'T'],  # 耳朵顶部
+                ['T', 'dog_brown', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_brown', 'T'],  # 耳朵
+                ['dog_brown', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_brown'],  # 头部顶部
+                ['dog_gold', 'dog_gold', 'car_red', 'black', 'black', 'car_red', 'dog_gold', 'dog_gold'],  # 兴奋眼睛
+                ['dog_gold', 'dog_gold', 'dog_gold', 'black', 'black', 'dog_gold', 'dog_gold', 'dog_gold'],  # 鼻子
+                ['dog_gold', 'dog_gold', 'black', 'car_red', 'car_red', 'black', 'dog_gold', 'dog_gold'],  # 兴奋嘴巴
+                ['T', 'dog_gold', 'car_red', 'pink', 'pink', 'car_red', 'dog_gold', 'T'],  # 兴奋舌头
+                ['dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold'],  # 脖子
+                ['dog_gold', 'dog_brown', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_brown', 'dog_gold'],  # 身体上部
+                ['dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold'],  # 身体下部
+                ['T', 'dog_brown', 'T', 'dog_brown', 'dog_brown', 'T', 'dog_brown', 'T'],  # 四条腿
+                ['T', 'black', 'T', 'black', 'black', 'T', 'black', 'T'],  # 爪子
             ]
         
         self.dog_pixels = self.create_pixel_sprite(
