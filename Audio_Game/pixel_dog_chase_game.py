@@ -28,7 +28,7 @@ class PixelDogChaseGame:
         self.RATE = 44100
         self.CHUNK = 1024
         self.CHANNELS = 1
-        
+
         # 游戏参数
         self.GAME_WIDTH = 12
         self.GAME_HEIGHT = 8
@@ -36,35 +36,34 @@ class PixelDogChaseGame:
         self.DOG_SIZE = 0.3
         self.PIXEL_SIZE = 0.08  # 像素块大小
         self.DOG_PIXEL_SIZE = 0.06  # 狗的像素块大小（更小）
-        
+
         # 游戏状态
         self.car_x = 2  # 车辆起始X位置
         self.car_y = self.GAME_HEIGHT / 2  # 车辆Y位置（中央）
         self.dog_x = 0.5  # 狗的起始X位置（在车后面）
         self.dog_y = self.GAME_HEIGHT / 2  # 狗的Y位置
-        
+
         self.car_speed = 0  # 当前车速
         self.dog_speed = 0.08  # 狗的速度（会逐渐增加）- 加快
         self.base_dog_speed = 0.08
         self.score = 0
         self.game_over = False
         self.game_time = 0
-        
+
         # 音频控制参数
         # Use 16-bit PCM which is far more common across devices
         self.FORMAT = pyaudio.paInt16
 
         # 音量控制参数（normalized RMS in 0..1 range after dividing by 32768)
-        self.volume_threshold = 0.002  # 静音/噪声阈值（更敏感）
-        self.max_volume = 0.15  # 期望的“最大”RMS，用于归一化（更容易拉满）
-        # Longer history for smoother response
+        self.volume_threshold = 0.0003  # 静音/噪声阈值（更灵敏）
+        self.max_volume = 0.04  # 期望的“最大”RMS，更容易拉满音量条（更明显）
         self.volume_history = [0.0] * 8  # 音量历史用于平滑
         self.min_car_speed = 0.07  # 最小车速（安静时）- 加快
         self.max_car_speed = 0.22  # 最大车速（大声时）- 加快
 
         # 初始化摄像机左边界（用于HUD跟随屏幕）
         self.prev_camera_left = 0.0
-        
+
         # 像素风格色彩
         self.pixel_colors = {
             'sky': '#87CEEB',
@@ -80,19 +79,15 @@ class PixelDogChaseGame:
             'green': '#00FF00',
             'pink': '#FF69B4'
         }
-        
+
         # 初始化音频
         self.setup_audio()
-        
+    def setup_audio(self):
+        """初始化音频系统"""
+        self.p = pyaudio.PyAudio()
+
         # 初始化图形
         self.setup_graphics()
-        
-    def setup_audio(self):
-        """初始化音频输入"""
-        self.p = pyaudio.PyAudio()
-        
-        print("🎮 初始化音频设备...")
-        input_device = None
         input_devices = []
         for i in range(self.p.get_device_count()):
             device_info = self.p.get_device_info_by_index(i)
@@ -133,6 +128,7 @@ class PixelDogChaseGame:
             sys.exit(1)
         
         try:
+            print(f"[DEBUG] 选择的音频输入设备: index={input_device}, name={self.p.get_device_info_by_index(input_device).get('name')}")
             self.stream = self.p.open(
                 format=self.FORMAT,
                 channels=self.CHANNELS,
@@ -332,11 +328,11 @@ class PixelDogChaseGame:
         
         self.volume_bg_pixels = self.create_pixel_sprite(6.5, 7.2, volume_bg_pattern, 0.06)
         
-        # 音量条像素
+        # 音量条像素（更长更明显）
         self.volume_pixels = []
-        for i in range(23):  # 23个像素宽的音量条
+        for i in range(40):  # 40个像素宽的音量条
             pixel = self.create_pixel_block(6.5 + 0.06 + i * 0.06, 7.2 + 0.06, 
-                                          0.06, 'green')
+                                          0.06, 'lime')
             pixel.set_alpha(0)  # 初始隐藏
             self.volume_pixels.append(pixel)
         
@@ -413,6 +409,7 @@ class PixelDogChaseGame:
             # store last measured raw and normalized volume for UI
             self.last_raw_volume = smooth_volume
             self.last_volume = normalized_volume
+            print(f"[DEBUG] 原始RMS: {smooth_volume:.5f} | 归一化: {normalized_volume:.3f}")
             return normalized_volume
         except Exception as e:
             print(f"音频分析错误: {e}")
@@ -519,17 +516,17 @@ class PixelDogChaseGame:
         # 若有声音但映射不足1个像素，则至少点亮1个
         if volume_level > 0.0 and active_pixels == 0:
             active_pixels = 1
-        
+
         for i, pixel in enumerate(self.volume_pixels):
             if i < active_pixels:
                 pixel.set_alpha(1)
-                # 根据音量级别改变颜色
+                # 更鲜明的颜色分级
                 if volume_level > 0.8:
                     pixel.set_facecolor('red')
                 elif volume_level > 0.5:
-                    pixel.set_facecolor('yellow')
+                    pixel.set_facecolor('orange')
                 else:
-                    pixel.set_facecolor('green')
+                    pixel.set_facecolor('lime')
             else:
                 pixel.set_alpha(0)
     
