@@ -36,6 +36,7 @@ class PixelDogChaseGame:
         self.CAR_SIZE = 0.4
         self.DOG_SIZE = 0.3
         self.PIXEL_SIZE = 0.08  # 像素块大小
+        self.DOG_PIXEL_SIZE = 0.06  # 狗的像素块大小（更小）
         
         # 游戏状态
         self.car_x = 2  # 车辆起始X位置
@@ -44,17 +45,18 @@ class PixelDogChaseGame:
         self.dog_y = self.GAME_HEIGHT / 2  # 狗的Y位置
         
         self.car_speed = 0  # 当前车速
-        self.dog_speed = 0.04  # 狗的速度（会逐渐增加）- 加快
-        self.base_dog_speed = 0.04
+        self.dog_speed = 0.08  # 狗的速度（会逐渐增加）- 加快
+        self.base_dog_speed = 0.08
         self.score = 0
         self.game_over = False
         self.game_time = 0
         
         # 音频控制参数
-        self.volume_threshold = 0.001  # 最小音量阈值
-        self.max_volume = 0.15  # 最大音量
-        self.min_car_speed = 0.03  # 最小车速（安静时）- 加快
-        self.max_car_speed = 0.15  # 最大车速（大声时）- 加快
+        self.volume_threshold = 0.0005  # 更低的最小音量阈值（更灵敏）
+        self.max_volume = 0.25  # 更高的最大音量（更宽容）
+        self.volume_history = [0.1] * 5  # 音量历史用于平滑
+        self.min_car_speed = 0.07  # 最小车速（安静时）- 加快
+        self.max_car_speed = 0.22  # 最大车速（大声时）- 加快
         
         # 像素风格色彩
         self.pixel_colors = {
@@ -246,9 +248,9 @@ class PixelDogChaseGame:
         """创建像素风格狗 - 改进版更可爱"""
         # 8位风格狗的图案 - 更详细更可爱的设计
         dog_pattern = [
-            ['T', 'T', 'dog_brown', 'dog_brown', 'dog_brown', 'dog_brown', 'T', 'T'],  # 耳朵顶部
-            ['T', 'dog_brown', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_brown', 'T'],  # 耳朵
-            ['dog_brown', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_brown'],  # 头部顶部
+            ['dog_brown', 'dog_brown', 'T', 'dog_brown', 'dog_brown', 'T', 'dog_brown', 'dog_brown'],  # 更大更明显的耳朵
+            ['dog_brown', 'dog_brown', 'dog_brown', 'dog_gold', 'dog_gold', 'dog_brown', 'dog_brown', 'dog_brown'],  # 耳朵底部
+            ['T', 'dog_brown', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_brown', 'T'],  # 头部顶部
             ['dog_gold', 'dog_gold', 'white', 'black', 'black', 'white', 'dog_gold', 'dog_gold'],  # 眼睛
             ['dog_gold', 'dog_gold', 'dog_gold', 'black', 'black', 'dog_gold', 'dog_gold', 'dog_gold'],  # 鼻子
             ['dog_gold', 'dog_gold', 'black', 'pink', 'pink', 'black', 'dog_gold', 'dog_gold'],  # 嘴巴
@@ -261,9 +263,9 @@ class PixelDogChaseGame:
         ]
         
         self.dog_pixels = self.create_pixel_sprite(
-            self.dog_x - len(dog_pattern[0]) * self.PIXEL_SIZE / 2,
-            self.dog_y - len(dog_pattern) * self.PIXEL_SIZE / 2,
-            dog_pattern, self.PIXEL_SIZE
+            self.dog_x - len(dog_pattern[0]) * self.DOG_PIXEL_SIZE / 2,
+            self.dog_y - len(dog_pattern) * self.DOG_PIXEL_SIZE / 2,
+            dog_pattern, self.DOG_PIXEL_SIZE
         )
     
     def create_pixel_ui(self):
@@ -354,19 +356,18 @@ class PixelDogChaseGame:
         try:
             data = self.stream.read(self.CHUNK, exception_on_overflow=False)
             audio_data = np.frombuffer(data, dtype=np.float32)
-            
             # 计算音量（RMS）
             volume = np.sqrt(np.mean(audio_data**2))
-            
+            # 平滑音量（移动平均）
+            self.volume_history.pop(0)
+            self.volume_history.append(volume)
+            smooth_volume = np.mean(self.volume_history)
             # 归一化音量到0-1范围
-            normalized_volume = min(volume / self.max_volume, 1.0)
-            
+            normalized_volume = min(smooth_volume / self.max_volume, 1.0)
             # 如果音量低于阈值，使用最小速度
-            if volume < self.volume_threshold:
+            if smooth_volume < self.volume_threshold:
                 normalized_volume = 0.1  # 最小10%速度
-            
             return normalized_volume
-            
         except Exception as e:
             print(f"音频分析错误: {e}")
             return 0.1  # 返回最小速度
@@ -385,7 +386,7 @@ class PixelDogChaseGame:
         
         # 更新狗的位置（狗会逐渐加速）
         self.game_time += 1
-        speed_increase = self.game_time * 0.0001  # 狗的加速度 - 加快加速
+        speed_increase = self.game_time * 0.00025  # 狗的加速度 - 加快加速
         self.dog_speed = self.base_dog_speed + speed_increase
         self.dog_x += self.dog_speed
         
@@ -459,9 +460,9 @@ class PixelDogChaseGame:
             ]
         
         self.dog_pixels = self.create_pixel_sprite(
-            self.dog_x - len(dog_pattern[0]) * self.PIXEL_SIZE / 2,
-            self.dog_y - len(dog_pattern) * self.PIXEL_SIZE / 2,
-            dog_pattern, self.PIXEL_SIZE
+            self.dog_x - len(dog_pattern[0]) * self.DOG_PIXEL_SIZE / 2,
+            self.dog_y - len(dog_pattern) * self.DOG_PIXEL_SIZE / 2,
+            dog_pattern, self.DOG_PIXEL_SIZE
         )
     
     def update_volume_display(self, volume_level):
@@ -619,7 +620,7 @@ class PixelDogChaseGame:
         
         try:
             self.ani = animation.FuncAnimation(
-                self.fig, self.game_loop, interval=50, 
+                self.fig, self.game_loop, interval=25, 
                 blit=False, cache_frame_data=False
             )
             plt.show()

@@ -246,7 +246,7 @@ class DogChaseGame:
             self.car_wheels.append((wheel, rim))
     
     def create_beautiful_dog(self):
-        """创建可爱的狗 - 新设计"""
+        """创建可爱的狗 - 头和身体合并为一个形状"""
         # 狗的阴影
         dog_shadow = patches.Ellipse(
             (self.dog_x + 0.05, self.dog_y - 0.05), self.DOG_SIZE + 0.1, self.DOG_SIZE * 0.9 + 0.05,
@@ -254,21 +254,14 @@ class DogChaseGame:
         )
         self.ax.add_patch(dog_shadow)
         self.dog_shadow = dog_shadow
-        
-        # 狗身体 - 金毛犬风格，更长的身体
+
+        # 狗身体和头部 - 合并为一个椭圆
         self.dog_patch = patches.Ellipse(
-            (self.dog_x, self.dog_y), self.DOG_SIZE + 0.1, self.DOG_SIZE * 0.7,
+            (self.dog_x, self.dog_y), self.DOG_SIZE + 0.2, self.DOG_SIZE * 1.4,
             facecolor='#FFD700', edgecolor='#DAA520', linewidth=2
         )
         self.ax.add_patch(self.dog_patch)
-        
-        # 狗头部 - 单独的圆形头部
-        self.dog_head = patches.Circle(
-            (self.dog_x + 0.12, self.dog_y), self.DOG_SIZE * 0.6,
-            facecolor='#FFD700', edgecolor='#DAA520', linewidth=2
-        )
-        self.ax.add_patch(self.dog_head)
-        
+
         # 狗的腿部
         self.dog_legs = []
         leg_positions = [(-0.08, -0.15), (0.08, -0.15)]  # 前腿和后腿
@@ -279,56 +272,56 @@ class DogChaseGame:
             )
             self.ax.add_patch(leg)
             self.dog_legs.append(leg)
-        
+
         # 狗的耳朵 - 垂耳设计
         self.dog_ears = []
         for ear_pos in [(-0.05, 0.08), (0.05, 0.08)]:
             ear = patches.Ellipse(
-                (self.dog_x + 0.12 + ear_pos[0], self.dog_y + ear_pos[1]),
+                (self.dog_x + ear_pos[0], self.dog_y + 0.3 + ear_pos[1]),
                 0.04, 0.12, facecolor='#DEB887', edgecolor='#CD853F', angle=ear_pos[0]*200
             )
             self.ax.add_patch(ear)
             self.dog_ears.append(ear)
-        
+
         # 狗的眼睛 - 更友善的表情
         self.dog_eyes = []
         for eye_pos in [(-0.03, 0.02), (0.03, 0.02)]:
             # 眼白
             eye_white = patches.Ellipse(
-                (self.dog_x + 0.12 + eye_pos[0], self.dog_y + eye_pos[1]),
+                (self.dog_x + eye_pos[0], self.dog_y + 0.1 + eye_pos[1]),
                 0.015, 0.02, facecolor='white', edgecolor='black', linewidth=1
             )
             self.ax.add_patch(eye_white)
             # 瞳孔
             pupil = patches.Circle(
-                (self.dog_x + 0.12 + eye_pos[0], self.dog_y + eye_pos[1]),
+                (self.dog_x + eye_pos[0], self.dog_y + 0.1 + eye_pos[1]),
                 0.008, facecolor='black'
             )
             self.ax.add_patch(pupil)
             self.dog_eyes.append((eye_white, pupil))
-        
+
         # 狗的鼻子 - 更大的黑鼻子
         nose = patches.Ellipse(
-            (self.dog_x + 0.12, self.dog_y - 0.05), 0.025, 0.015, 
+            (self.dog_x, self.dog_y - 0.05), 0.025, 0.015, 
             facecolor='black', edgecolor='none'
         )
         self.ax.add_patch(nose)
         self.dog_nose = nose
-        
+
         # 狗的嘴巴 - 微笑的弧线
         self.dog_mouth = patches.Arc(
-            (self.dog_x + 0.12, self.dog_y - 0.08), 0.06, 0.04,
+            (self.dog_x, self.dog_y - 0.08), 0.06, 0.04,
             angle=0, theta1=0, theta2=180, color='black', linewidth=2
         )
         self.ax.add_patch(self.dog_mouth)
-        
+
         # 狗的舌头 - 伸出的舌头
         self.dog_tongue = patches.Ellipse(
-            (self.dog_x + 0.16, self.dog_y - 0.08), 0.03, 0.015,
+            (self.dog_x + 0.04, self.dog_y - 0.1), 0.03, 0.015,
             facecolor='#FF69B4', edgecolor='#FF1493', linewidth=1
         )
         self.ax.add_patch(self.dog_tongue)
-        
+
         # 狗的尾巴 - 卷曲的尾巴
         tail = patches.Arc(
             (self.dog_x - 0.15, self.dog_y + 0.02), 0.12, 0.12,
@@ -395,7 +388,7 @@ class DogChaseGame:
         flower_positions = [(0.3, 1.5), (0.8, 1.2), (0.2, 6.5), (0.7, 6.8),
                            (11.2, 1.3), (11.7, 1.7), (11.3, 6.2), (11.8, 6.6)]
         colors = ['red', 'yellow', 'pink', 'purple', 'orange']
-        
+
         for i, (x, y) in enumerate(flower_positions):
             color = colors[i % len(colors)]
             # 花瓣
@@ -407,7 +400,7 @@ class DogChaseGame:
             center = patches.Circle((x, y), 0.02, facecolor='yellow')
             self.ax.add_patch(center)
             self.flowers.append(center)
-        
+
         # 云朵 - 更蓬松
         self.clouds = []
         cloud_positions = [(2, 7), (5, 7.2), (8, 6.8), (10, 7.1)]
@@ -421,7 +414,7 @@ class DogChaseGame:
                 self.ax.add_patch(cloud_part)
                 cloud_parts.append(cloud_part)
             self.clouds.append(cloud_parts)
-        
+
         # 美丽的树木
         tree_positions = [(0.2, 1), (0.2, 7), (11.8, 1), (11.8, 7)]
         for x, y in tree_positions:
@@ -429,7 +422,7 @@ class DogChaseGame:
             trunk = patches.Rectangle((x-0.06, y-0.4), 0.12, 0.8, 
                                     facecolor='#8B4513', edgecolor='#654321', linewidth=2)
             self.ax.add_patch(trunk)
-            
+
             # 树冠 - 多层效果
             for size, color, offset in [(0.25, '#228B22', 0), (0.2, '#32CD32', 0.02), (0.15, '#90EE90', 0.04)]:
                 crown = patches.Circle((x, y + 0.3 + offset), size, 
@@ -535,39 +528,25 @@ class DogChaseGame:
         # 更新狗的阴影
         self.dog_shadow.center = (self.dog_x + 0.05, self.dog_y - 0.05)
         
-        # 更新狗身体
+        # 更新狗身体和头部
         self.dog_patch.center = (self.dog_x, self.dog_y)
-        
-        # 更新狗头部
-        self.dog_head.center = (self.dog_x + 0.12, self.dog_y)
-        
-        # 更新狗的腿部
-        leg_positions = [(-0.08, -0.15), (0.08, -0.15)]
-        for i, leg_pos in enumerate(leg_positions):
-            self.dog_legs[i].set_x(self.dog_x + leg_pos[0] - 0.02)
-            self.dog_legs[i].set_y(self.dog_y + leg_pos[1] - 0.08)
-        
-        # 更新狗的耳朵
-        ear_positions = [(-0.05, 0.08), (0.05, 0.08)]
-        for i, ear_pos in enumerate(ear_positions):
-            self.dog_ears[i].center = (self.dog_x + 0.12 + ear_pos[0], self.dog_y + ear_pos[1])
         
         # 更新狗的眼睛
         eye_positions = [(-0.03, 0.02), (0.03, 0.02)]
         for i, eye_pos in enumerate(eye_positions):
             eye_white, pupil = self.dog_eyes[i]
-            eye_white.center = (self.dog_x + 0.12 + eye_pos[0], self.dog_y + eye_pos[1])
-            pupil.center = (self.dog_x + 0.12 + eye_pos[0], self.dog_y + eye_pos[1])
+            eye_white.center = (self.dog_x + eye_pos[0], self.dog_y + 0.1 + eye_pos[1])
+            pupil.center = (self.dog_x + eye_pos[0], self.dog_y + 0.1 + eye_pos[1])
         
         # 更新狗的鼻子
-        self.dog_nose.center = (self.dog_x + 0.12, self.dog_y - 0.05)
+        self.dog_nose.center = (self.dog_x, self.dog_y - 0.05)
         
         # 更新狗的嘴巴
-        self.dog_mouth.set_center((self.dog_x + 0.12, self.dog_y - 0.08))
+        self.dog_mouth.set_center((self.dog_x, self.dog_y - 0.08))
         
         # 更新狗的舌头（添加摆动效果）
         tongue_sway = 0.01 * np.sin(self.game_time * 0.2)
-        self.dog_tongue.center = (self.dog_x + 0.16 + tongue_sway, self.dog_y - 0.08)
+        self.dog_tongue.center = (self.dog_x + 0.04 + tongue_sway, self.dog_y - 0.1)
         
         # 更新狗的尾巴（弧形尾巴的位置）
         self.dog_tail.set_center((self.dog_x - 0.15, self.dog_y + 0.02))
@@ -590,17 +569,6 @@ class DogChaseGame:
             base_pos = [(0.3, 1.5), (0.8, 1.2), (0.2, 6.5), (0.7, 6.8),
                        (11.2, 1.3), (11.7, 1.7), (11.3, 6.2), (11.8, 6.6)][i]
             flower.center = (base_pos[0] + sway, base_pos[1])
-        
-        # 让云朵慢慢移动
-        cloud_drift = (self.game_time * 0.005) % 15
-        base_positions = [(2, 7), (5, 7.2), (8, 6.8), (10, 7.1)]
-        for i, cloud_parts in enumerate(self.clouds):
-            base_x = base_positions[i][0] + cloud_drift
-            if base_x > 12:
-                base_x -= 15  # 循环回来
-            for j, part in enumerate(cloud_parts):
-                offsets = [(-0.2, 0), (0, 0.1), (0.2, 0), (0, -0.1)][j]
-                part.center = (base_x + offsets[0], base_positions[i][1] + offsets[1])
     
     def update_camera(self):
         """更新摄像机视角，跟随车辆"""
