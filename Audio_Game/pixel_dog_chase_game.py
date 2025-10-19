@@ -27,7 +27,6 @@ class PixelDogChaseGame:
         # 音频参数
         self.RATE = 44100
         self.CHUNK = 1024
-        self.FORMAT = pyaudio.paFloat32
         self.CHANNELS = 1
         
         # 游戏参数
@@ -52,11 +51,19 @@ class PixelDogChaseGame:
         self.game_time = 0
         
         # 音频控制参数
-        self.volume_threshold = 0.0005  # 更低的最小音量阈值（更灵敏）
-        self.max_volume = 0.25  # 更高的最大音量（更宽容）
-        self.volume_history = [0.1] * 5  # 音量历史用于平滑
+        # Use 16-bit PCM which is far more common across devices
+        self.FORMAT = pyaudio.paInt16
+
+        # 音量控制参数（normalized RMS in 0..1 range after dividing by 32768)
+        self.volume_threshold = 0.002  # 静音/噪声阈值（更敏感）
+        self.max_volume = 0.15  # 期望的“最大”RMS，用于归一化（更容易拉满）
+        # Longer history for smoother response
+        self.volume_history = [0.0] * 8  # 音量历史用于平滑
         self.min_car_speed = 0.07  # 最小车速（安静时）- 加快
         self.max_car_speed = 0.22  # 最大车速（大声时）- 加快
+
+        # 初始化摄像机左边界（用于HUD跟随屏幕）
+        self.prev_camera_left = 0.0
         
         # 像素风格色彩
         self.pixel_colors = {
@@ -86,12 +93,40 @@ class PixelDogChaseGame:
         
         print("🎮 初始化音频设备...")
         input_device = None
+        input_devices = []
         for i in range(self.p.get_device_count()):
             device_info = self.p.get_device_info_by_index(i)
-            if device_info['maxInputChannels'] > 0:
-                input_device = i
-                print(f"找到音频设备: {device_info['name']}")
-                break
+            if device_info.get('maxInputChannels', 0) > 0:
+                input_devices.append((i, device_info))
+
+        # 打印可用输入设备供参考
+        if input_devices:
+            print("可用输入设备:")
+            for idx, info in input_devices:
+                print(f"  - index={idx}, name={info.get('name')}, channels={info.get('maxInputChannels')}, defaultSR={info.get('defaultSampleRate')}")
+
+        # 优先使用系统默认输入设备
+        try:
+            default_info = self.p.get_default_input_device_info()
+            input_device = default_info.get('index')
+            print(f"优先选择系统默认输入设备: index={input_device}, name={default_info.get('name')}")
+        except Exception:
+            input_device = None
+
+        # 如果没有默认设备，尝试匹配常见麦克风名称（内置麦）
+        if input_device is None and input_devices:
+            preferred_names = ['Built-in Microphone', 'MacBook', 'Microphone', '内建麦克风']
+            for idx, info in input_devices:
+                name = (info.get('name') or '').lower()
+                if any(p.lower() in name for p in preferred_names):
+                    input_device = idx
+                    print(f"匹配到首选麦克风: index={idx}, name={info.get('name')}")
+                    break
+
+        # 仍未找到则退回第一个可用输入设备
+        if input_device is None and input_devices:
+            input_device = input_devices[0][0]
+            print(f"使用第一个可用输入设备: index={input_device}, name={input_devices[0][1].get('name')}")
         
         if input_device is None:
             print("❌ 未找到音频输入设备!")
@@ -248,8 +283,8 @@ class PixelDogChaseGame:
         """创建像素风格狗 - 改进版更可爱"""
         # 8位风格狗的图案 - 更详细更可爱的设计
         dog_pattern = [
-            ['dog_brown', 'dog_brown', 'T', 'dog_brown', 'dog_brown', 'T', 'dog_brown', 'dog_brown'],  # 更大更明显的耳朵
-            ['dog_brown', 'dog_brown', 'dog_brown', 'dog_gold', 'dog_gold', 'dog_brown', 'dog_brown', 'dog_brown'],  # 耳朵底部
+            ['dog_brown', 'dog_brown', 'dog_brown', 'T', 'T', 'dog_brown', 'dog_brown', 'dog_brown'],  # 耳朵（更宽更突出）
+            ['dog_brown', 'dog_brown', 'dog_brown', 'T', 'T', 'dog_brown', 'dog_brown', 'dog_brown'],  # 耳朵底部
             ['T', 'dog_brown', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_brown', 'T'],  # 头部顶部
             ['dog_gold', 'dog_gold', 'white', 'black', 'black', 'white', 'dog_gold', 'dog_gold'],  # 眼睛
             ['dog_gold', 'dog_gold', 'dog_gold', 'black', 'black', 'dog_gold', 'dog_gold', 'dog_gold'],  # 鼻子
@@ -307,11 +342,14 @@ class PixelDogChaseGame:
         
         # 游戏说明 - 使用文字但像素风格字体
         self.info_text = self.ax.text(0.25, 7.7, '', fontsize=10, fontweight='bold', 
-                                     color='lime', family='monospace',
-                                     verticalalignment='top')
+                                      color='lime', family='monospace',
+                                      verticalalignment='top')
         
         self.volume_text = self.ax.text(6.6, 7.6, 'VOLUME', fontsize=12, fontweight='bold', 
-                                       color='yellow', family='monospace')
+                                        color='yellow', family='monospace')
+        # 记录HUD用于跟随的初始x（随相机平移时同步移动）
+        self.hud_groups = [self.info_bg_pixels, self.volume_bg_pixels, self.volume_pixels]
+        self.hud_texts = [self.info_text, self.volume_text]
     
     def add_pixel_decorations(self):
         """添加像素装饰元素"""
@@ -355,22 +393,31 @@ class PixelDogChaseGame:
         """分析音频信号，返回音量级别"""
         try:
             data = self.stream.read(self.CHUNK, exception_on_overflow=False)
-            audio_data = np.frombuffer(data, dtype=np.float32)
-            # 计算音量（RMS）
-            volume = np.sqrt(np.mean(audio_data**2))
-            # 平滑音量（移动平均）
+            # Interpret as 16-bit signed integers (most devices)
+            audio_data = np.frombuffer(data, dtype=np.int16)
+            if audio_data.size == 0:
+                return 0.0
+            # Convert to float32 in range [-1,1]
+            audio_float = audio_data.astype(np.float32) / 32768.0
+            # Compute RMS
+            volume = float(np.sqrt(np.mean(np.square(audio_float))))
+            # Update smoothing history
             self.volume_history.pop(0)
             self.volume_history.append(volume)
-            smooth_volume = np.mean(self.volume_history)
-            # 归一化音量到0-1范围
-            normalized_volume = min(smooth_volume / self.max_volume, 1.0)
-            # 如果音量低于阈值，使用最小速度
+            smooth_volume = float(np.mean(self.volume_history))
+            # Normalize using expected max_volume
+            normalized_volume = min(smooth_volume / float(self.max_volume), 1.0)
+            # If below threshold treat as silence
             if smooth_volume < self.volume_threshold:
-                normalized_volume = 0.1  # 最小10%速度
+                normalized_volume = 0.0
+            # store last measured raw and normalized volume for UI
+            self.last_raw_volume = smooth_volume
+            self.last_volume = normalized_volume
             return normalized_volume
         except Exception as e:
             print(f"音频分析错误: {e}")
-            return 0.1  # 返回最小速度
+            # On error, keep previous value if available, else return 0
+            return getattr(self, 'last_volume', 0.0)
     
     def update_positions(self):
         """更新车辆和狗的位置"""
@@ -425,12 +472,12 @@ class PixelDogChaseGame:
         )
         
         # 重新创建狗像素 - 根据时间添加动画效果
-        # 每30帧切换一次狗的表情
-        if (self.game_time // 30) % 2 == 0:
-            # 正常可爱表情
+        # 每90帧切换一次狗的表情（耳朵状态持续更久）
+        if (self.game_time // 90) % 2 == 0:
+            # 正常可爱表情（保证有耳朵）
             dog_pattern = [
-                ['T', 'T', 'dog_brown', 'dog_brown', 'dog_brown', 'dog_brown', 'T', 'T'],  # 耳朵顶部
-                ['T', 'dog_brown', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_brown', 'T'],  # 耳朵
+                ['dog_brown', 'dog_brown', 'dog_brown', 'T', 'T', 'dog_brown', 'dog_brown', 'dog_brown'],  # 耳朵顶部
+                ['dog_brown', 'dog_brown', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_brown', 'dog_brown'],  # 耳朵
                 ['dog_brown', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_brown'],  # 头部顶部
                 ['dog_gold', 'dog_gold', 'white', 'black', 'black', 'white', 'dog_gold', 'dog_gold'],  # 眼睛
                 ['dog_gold', 'dog_gold', 'dog_gold', 'black', 'black', 'dog_gold', 'dog_gold', 'dog_gold'],  # 鼻子
@@ -443,10 +490,10 @@ class PixelDogChaseGame:
                 ['T', 'black', 'T', 'black', 'black', 'T', 'black', 'T'],  # 爪子
             ]
         else:
-            # 兴奋追逐表情
+            # 兴奋追逐表情（保证有耳朵）
             dog_pattern = [
-                ['T', 'T', 'dog_brown', 'dog_brown', 'dog_brown', 'dog_brown', 'T', 'T'],  # 耳朵顶部
-                ['T', 'dog_brown', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_brown', 'T'],  # 耳朵
+                ['dog_brown', 'dog_brown', 'dog_brown', 'T', 'T', 'dog_brown', 'dog_brown', 'dog_brown'],  # 耳朵顶部
+                ['dog_brown', 'dog_brown', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_brown', 'dog_brown'],  # 耳朵
                 ['dog_brown', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_gold', 'dog_brown'],  # 头部顶部
                 ['dog_gold', 'dog_gold', 'car_red', 'black', 'black', 'car_red', 'dog_gold', 'dog_gold'],  # 兴奋眼睛
                 ['dog_gold', 'dog_gold', 'dog_gold', 'black', 'black', 'dog_gold', 'dog_gold', 'dog_gold'],  # 鼻子
@@ -469,6 +516,9 @@ class PixelDogChaseGame:
         """更新音量显示"""
         # 更新音量条
         active_pixels = int(volume_level * len(self.volume_pixels))
+        # 若有声音但映射不足1个像素，则至少点亮1个
+        if volume_level > 0.0 and active_pixels == 0:
+            active_pixels = 1
         
         for i, pixel in enumerate(self.volume_pixels):
             if i < active_pixels:
@@ -509,7 +559,28 @@ class PixelDogChaseGame:
         # 确保摄像机不会超出边界
         camera_x = max(0, min(camera_x, max(0, self.car_x - 8)))
         
+        # 在更新xlim前，计算需要同步HUD的平移量（保持HUD相对屏幕位置不变）
+        dx = camera_x - self.prev_camera_left
         self.ax.set_xlim(camera_x, camera_x + self.GAME_WIDTH)
+        # 平移HUD元素
+        if dx != 0:
+            self.shift_hud(dx)
+        self.prev_camera_left = camera_x
+
+    def shift_hud(self, dx):
+        """将HUD（信息面板、音量条与文字）随相机平移dx，使其固定在屏幕视口"""
+        try:
+            for group in self.hud_groups:
+                for rect in group:
+                    x, y = rect.get_xy()
+                    rect.set_xy((x + dx, y))
+            for txt in self.hud_texts:
+                x = txt.get_position()[0]
+                y = txt.get_position()[1]
+                txt.set_position((x + dx, y))
+        except Exception:
+            # 即使HUD平移失败也不影响游戏主逻辑
+            pass
     
     def game_loop(self, frame):
         """主游戏循环"""
@@ -555,14 +626,15 @@ class PixelDogChaseGame:
         # 计算距离差
         distance_diff = self.car_x - self.dog_x
         
-        # 更新信息显示 - 像素风格
-        volume_level = self.analyze_audio()
+        # 更新信息显示 - 像素风格（避免重复读取音频，使用上一轮计算结果）
+        volume_level = getattr(self, 'last_volume', 0.0)
+        raw_vol = getattr(self, 'last_raw_volume', 0.0)
         info_text = (
             f"DIST: {self.score:.1f}M\n"
             f"SPEED: {self.car_speed*1000:.0f}\n"
             f"DOG: {self.dog_speed*1000:.0f}\n"
             f"LEAD: {distance_diff:.1f}M\n"
-            f"VOL: {volume_level*100:.0f}%\n"
+            f"VOL: {volume_level*100:.0f}%  RAW:{raw_vol:.3f}\n"
             f"TIME: {self.game_time//50:.0f}S"
         )
         self.info_text.set_text(info_text)

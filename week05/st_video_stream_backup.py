@@ -11,8 +11,8 @@ st.set_page_config(
     layout="wide",
 )
 
-st.title("📹 Smart Video Stream with Expression Recognition (Backup)")
-st.markdown("Apply real-time effects and detect facial expressions with AI! 😊😮😢😡")
+st.title("📹 Smart Video Stream - Face Detection Only (Backup)")
+st.markdown("Apply real-time effects and detect faces only (no expression recognition).")
 
 # Sidebar for effect selection
 with st.sidebar:
@@ -28,16 +28,13 @@ with st.sidebar:
             "Edge Detection",
             "Blur",
             "Sepia",
-            "Emotion Recognition",
-            "Fun Emoji Overlay",
+        # emotion-related effects removed — face detection only
         ],
     )
 
     # AI Features Toggle
     st.subheader("🤖 Facial Detection Features")
-    enable_emotion_detection = st.checkbox("Enable Emotion Detection", value=False)
     enable_face_tracking = st.checkbox("Enable Face Tracking", value=True)
-    show_emotion_stats = st.checkbox("Show Emotion Statistics", value=False)
     debug_mode = st.checkbox("🔧 Debug Mode (Show detection info)", value=True)
 
     # Face detection sensitivity
@@ -63,20 +60,14 @@ st.session_state.effect_params = {
     "blur_amount": blur_amount,
     "threshold1": threshold1,
     "threshold2": threshold2,
-    "enable_emotion_detection": enable_emotion_detection,
     "enable_face_tracking": enable_face_tracking,
-    "show_emotion_stats": show_emotion_stats,
     "debug_mode": debug_mode,
     "detection_sensitivity": detection_sensitivity,
     "min_face_size": min_face_size,
 }
 
-# Initialize simple emotion/face stats in session_state
-st.session_state.setdefault("emotion_history", [])
-st.session_state.setdefault("current_emotion", "neutral")
-st.session_state.setdefault("emotion_confidence", 0.0)
+# Initialize simple face stats in session_state
 st.session_state.setdefault("face_count", 0)
-st.session_state.setdefault("last_emotion_time", 0)
 
 # Load cascade classifiers once
 @st.cache_resource
@@ -105,7 +96,6 @@ def video_frame_callback(frame):
             "blur_amount": 15,
             "threshold1": 100,
             "threshold2": 200,
-            "enable_emotion_detection": False,
             "enable_face_tracking": True,
             "debug_mode": True,
             "detection_sensitivity": 7,
@@ -116,7 +106,6 @@ def video_frame_callback(frame):
     current_blur = int(params.get("blur_amount", 15))
     current_threshold1 = int(params.get("threshold1", 100))
     current_threshold2 = int(params.get("threshold2", 200))
-    enable_emotion = params.get("enable_emotion_detection", False)
     enable_face = params.get("enable_face_tracking", True)
     debug = params.get("debug_mode", True)
     detection_sensitivity = int(params.get("detection_sensitivity", 7))
@@ -129,7 +118,7 @@ def video_frame_callback(frame):
     detection_method = "none"
 
     # Only run detection when relevant
-    if enable_face or enable_emotion or current_effect in ["Face Detection", "Emotion Recognition", "Fun Emoji Overlay"]:
+    if enable_face or current_effect == "Face Detection":
         try:
             # Enhance image slightly
             proc = cv2.equalizeHist(gray)
@@ -174,28 +163,7 @@ def video_frame_callback(frame):
         cx, cy = x + w // 2, y + h // 2
         cv2.circle(img, (cx, cy), 3, (0, 0, 255), -1)
 
-        if current_effect == "Emotion Recognition" or enable_emotion:
-            # Placeholder/simple random emotion for demo (replace with model if available)
-            emotions = ["happy", "sad", "angry", "surprised", "neutral"]
-            emotion = np.random.choice(emotions)
-            conf = np.random.uniform(0.6, 0.95)
-            cv2.putText(img, f"{emotion} {conf:.2f}", (x, y + h + 20), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 255), 2)
-            # update session_state safely (best-effort; ignore failures)
-            try:
-                st.session_state.current_emotion = emotion
-                st.session_state.emotion_confidence = conf
-            except Exception:
-                pass
-
-        if current_effect == "Fun Emoji Overlay":
-            emoji_map = {"happy": ":)", "sad": ":(", "angry": ">:(", "surprised": ":O", "neutral": ":|"}
-            # read from session if possible
-            try:
-                emotion_label = st.session_state.get("current_emotion", "neutral")
-            except Exception:
-                emotion_label = "neutral"
-            emoji = emoji_map.get(emotion_label, ":)")
-            cv2.putText(img, emoji, (x + w // 2 - 20, y + h // 2), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 255), 3)
+        # Face-only overlays (label and bounding box) kept above
 
     # If no faces and debug, show hint
     if face_count == 0 and debug:
@@ -252,16 +220,13 @@ with col2:
 
     # Real-time AI stats
     st.metric("👥 Faces Detected", st.session_state.get("face_count", 0))
-    st.metric("😊 Current Emotion", st.session_state.get("current_emotion", "neutral"))
-    st.metric("📈 Confidence", f"{st.session_state.get('emotion_confidence', 0.0):.2f}")
 
     st.markdown(f"""
     **Current Effect:** {current_effect}
     
     **🎭 AI Features:**
     - 👁️ Face Detection & Tracking
-    - 😊 Real-time Emotion Recognition (demo)
-    - 🎨 Smart Emoji Overlays
+    - 🎨 Smart Emoji Overlays (face-only)
     
     **💡 Tips:**
     - Enable AI features in sidebar

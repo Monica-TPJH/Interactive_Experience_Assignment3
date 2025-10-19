@@ -123,171 +123,138 @@ def video_frame_callback(frame):
     
     # Face detection and emotion analysis - 总是启用，即使没有选择特定效果
     # Always enable face detection for better user experience
-    try:
-        # 预处理图像以提高检测率
-        gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
-        # 增强对比度
-        gray = cv2.equalizeHist(gray)
-        
-        # 加载多种人脸检测分类器
-        face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-        face_cascade_alt = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_alt.xml')
-        face_cascade_alt2 = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_alt2.xml')
-        
-        faces = []
-        
-        # Method 1: 用户配置的检测参数
-        if enable_face or enable_emotion or current_effect in ["Face Detection", "Emotion Recognition", "Fun Emoji Overlay"]:
-            faces = face_cascade.detectMultiScale(
+    # 预处理图像以提高检测率
+    gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    # 增强对比度
+    gray = cv2.equalizeHist(gray)
+    # 加载多种人脸检测分类器
+    face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
+    face_cascade_alt = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_alt.xml')
+    face_cascade_alt2 = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_alt2.xml')
+    faces = []
+    # Method 1: 用户配置的检测参数
+    if enable_face or enable_emotion or current_effect in ["Face Detection", "Emotion Recognition", "Fun Emoji Overlay"]:
+        faces = face_cascade.detectMultiScale(
+            gray,
+            scaleFactor=scale_factor,
+            minNeighbors=min_neighbors,
+            minSize=(min_face_size, min_face_size),
+            maxSize=(500, 500),  # 增大最大尺寸
+            flags=cv2.CASCADE_SCALE_IMAGE
+        )
+    # Method 2: 如果没检测到，使用更宽松的参数
+    if len(faces) == 0:
+        faces = face_cascade.detectMultiScale(
+            gray,
+            scaleFactor=1.05,  # 更小的步长
+            minNeighbors=1,    # 最小邻居数
+            minSize=(10, 10),  # 更小的最小尺寸
+            maxSize=(600, 600), # 更大的最大尺寸
+            flags=cv2.CASCADE_SCALE_IMAGE
+        )
+    # Method 3: 尝试替代分类器
+    if len(faces) == 0:
+        try:
+            faces = face_cascade_alt.detectMultiScale(
                 gray,
-                scaleFactor=scale_factor,
-                minNeighbors=min_neighbors,
-                minSize=(min_face_size, min_face_size),
-                maxSize=(500, 500),  # 增大最大尺寸
+                scaleFactor=1.05,
+                minNeighbors=1,
+                minSize=(10, 10),
+                maxSize=(600, 600),
                 flags=cv2.CASCADE_SCALE_IMAGE
             )
-        
-        # Method 2: 如果没检测到，使用更宽松的参数
-        if len(faces) == 0:
-            faces = face_cascade.detectMultiScale(
+        except Exception:
+            pass
+    # Method 4: 尝试第二个替代分类器
+    if len(faces) == 0:
+        try:
+            faces = face_cascade_alt2.detectMultiScale(
                 gray,
-                scaleFactor=1.05,  # 更小的步长
-                minNeighbors=1,    # 最小邻居数
-                minSize=(10, 10),  # 更小的最小尺寸
-                maxSize=(600, 600), # 更大的最大尺寸
+                scaleFactor=1.05,
+                minNeighbors=1,
+                minSize=(10, 10),
+                maxSize=(600, 600),
                 flags=cv2.CASCADE_SCALE_IMAGE
             )
-        
-        # Method 3: 尝试替代分类器
-        if len(faces) == 0:
-            try:
-                faces = face_cascade_alt.detectMultiScale(
-                    gray,
-                    scaleFactor=1.05,
-                    minNeighbors=1,
-                    minSize=(10, 10),
-                    maxSize=(600, 600),
-                    flags=cv2.CASCADE_SCALE_IMAGE
-                )
-            except Exception:
-                pass
-        
-        # Method 4: 尝试第二个替代分类器
-        if len(faces) == 0:
-            try:
-                faces = face_cascade_alt2.detectMultiScale(
-                    gray,
-                    scaleFactor=1.05,
-                    minNeighbors=1,
-                    minSize=(10, 10),
-                    maxSize=(600, 600),
-                    flags=cv2.CASCADE_SCALE_IMAGE
-                )
-            except Exception:
-                pass
-        
-        # Method 5: 最宽松的检测（紧急模式）
-        if len(faces) == 0:
-            faces = face_cascade.detectMultiScale(
-                gray,
-                scaleFactor=1.01,  # 非常小的步长
-                minNeighbors=1,    # 最少邻居
-                minSize=(5, 5),    # 极小的最小尺寸
-                maxSize=(800, 800), # 极大的最大尺寸
-                flags=cv2.CASCADE_SCALE_IMAGE | cv2.CASCADE_DO_CANNY_PRUNING
-            )
-            
-            # Update face count for this frame
-            face_count = len(faces)
-            
+        except Exception:
+            pass
+    # Method 5: 最宽松的检测（紧急模式）
+    if len(faces) == 0:
+        faces = face_cascade.detectMultiScale(
+            gray,
+            scaleFactor=1.01,  # 非常小的步长
+            minNeighbors=1,    # 最少邻居
+            minSize=(5, 5),    # 极小的最小尺寸
+            maxSize=(800, 800), # 极大的最大尺寸
+            flags=cv2.CASCADE_SCALE_IMAGE | cv2.CASCADE_DO_CANNY_PRUNING
+        )
+    # Update face count for this frame
+    face_count = len(faces)
+    # Update shared data (thread-safe)
+    st.session_state.shared_data.update_face_count(face_count)
+    # 总是显示检测状态（改进调试信息）
+    if debug_mode or True:  # 总是显示基本信息
+        status_text = f"Faces: {len(faces)} | Sens: {detection_sensitivity} | MinSize: {min_face_size}"
+        cv2.putText(img, status_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
+        # 显示图像质量信息
+        brightness = np.mean(gray)
+        quality_text = f"Brightness: {brightness:.1f} | Size: {img.shape[1]}x{img.shape[0]}"
+        cv2.putText(img, quality_text, (10, 55), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 0), 1)
+    # 绘制人脸矩形和特征（总是显示检测到的人脸）
+    for i, (x, y, w, h) in enumerate(faces):
+        # 总是显示检测到的人脸，不管选择什么效果
+        # 绘制彩色人脸矩形，提高可见性
+        color = (0, 255, 0) if i == 0 else (255, 0, 255)  # 第一个人脸用绿色，其他用紫色
+        cv2.rectangle(img, (x, y), (x+w, y+h), color, 3)
+        # 添加人脸标签
+        label = f"Face {i+1} ({w}x{h})"
+        cv2.putText(img, label, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
+        # 添加人脸中心点，提高可见性
+        center_x, center_y = x + w//2, y + h//2
+        cv2.circle(img, (center_x, center_y), 5, (0, 0, 255), -1)
+        # 添加人脸置信度指示器
+        confidence_color = (0, 255, 0) if w * h > 2500 else (255, 255, 0)  # 大人脸绿色，小人脸黄色
+        cv2.circle(img, (x + w - 10, y + 10), 8, confidence_color, -1)
+        # Emotion detection (simplified for real-time performance)
+        if current_effect == "Emotion Recognition" or enable_emotion:
+            # Use a simple emotion mapping based on basic features
+            # In a real implementation, you'd use a trained emotion model
+            emotions = ["happy", "sad", "angry", "surprised", "neutral", "fear", "disgust"]
+            current_emotion = np.random.choice(emotions)  # Placeholder for demo
+            confidence = np.random.uniform(0.6, 0.95)     # Placeholder confidence
             # Update shared data (thread-safe)
-            st.session_state.shared_data.update_face_count(face_count)
-            
-        # 总是显示检测状态（改进调试信息）
-        if debug_mode or True:  # 总是显示基本信息
-            status_text = f"Faces: {len(faces)} | Sens: {detection_sensitivity} | MinSize: {min_face_size}"
-            cv2.putText(img, status_text, (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 255), 2)
-            
-            # 显示图像质量信息
-            brightness = np.mean(gray)
-            quality_text = f"Brightness: {brightness:.1f} | Size: {img.shape[1]}x{img.shape[0]}"
-            cv2.putText(img, quality_text, (10, 55), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 0), 1)
-            
-        # 绘制人脸矩形和特征（总是显示检测到的人脸）
-        for i, (x, y, w, h) in enumerate(faces):
-            # 总是显示检测到的人脸，不管选择什么效果
-            # 绘制彩色人脸矩形，提高可见性
-            color = (0, 255, 0) if i == 0 else (255, 0, 255)  # 第一个人脸用绿色，其他用紫色
-            cv2.rectangle(img, (x, y), (x+w, y+h), color, 3)
-            
-            # 添加人脸标签
-            label = f"Face {i+1} ({w}x{h})"
-            cv2.putText(img, label, (x, y-10), cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
-            
-            # 添加人脸中心点，提高可见性
-            center_x, center_y = x + w//2, y + h//2
-            cv2.circle(img, (center_x, center_y), 5, (0, 0, 255), -1)
-            
-            # 添加人脸置信度指示器
-            confidence_color = (0, 255, 0) if w * h > 2500 else (255, 255, 0)  # 大人脸绿色，小人脸黄色
-            cv2.circle(img, (x + w - 10, y + 10), 8, confidence_color, -1)
-                
-                # Emotion detection (simplified for real-time performance)
-                if current_effect == "Emotion Recognition" or enable_emotion:
-                    try:
-                        # Use a simple emotion mapping based on basic features
-                        # In a real implementation, you'd use a trained emotion model
-                        emotions = ["happy", "sad", "angry", "surprised", "neutral", "fear", "disgust"]
-                        current_emotion = np.random.choice(emotions)  # Placeholder for demo
-                        confidence = np.random.uniform(0.6, 0.95)     # Placeholder confidence
-                        
-                        # Update shared data (thread-safe)
-                        st.session_state.shared_data.update_emotion(current_emotion, confidence)
-                        
-                        # Draw emotion label with better positioning
-                        emotion_text = f"{current_emotion.title()}: {confidence:.2f}"
-                        cv2.putText(img, emotion_text, (x, y+h+25), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 255), 2)
-                    except Exception:
-                        pass
-                
-                # Fun emoji overlay
-                if current_effect == "Fun Emoji Overlay":
-                    emoji_map = {
-                        "happy": ":)", "sad": ":(", "angry": ">:(", 
-                        "surprised": ":O", "neutral": ":|", "fear": ":S", "disgust": ":P"
-                    }
-                    # Get emotion from shared data or use random for demo
-                    shared_data = st.session_state.shared_data.get_data()
-                    emotion = shared_data.get('current_emotion', 'neutral')
-                    emoji = emoji_map.get(emotion, ":)")
-                    
-                    # Draw emoji text (using ASCII for better compatibility)
-                    cv2.putText(img, emoji, (x+w//2-20, y+h//2), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 255), 3)
-            
-        # 如果没有检测到人脸，显示有用的调试信息
-        if len(faces) == 0:
-            help_text = "No faces detected - Tips:"
-            cv2.putText(img, help_text, (10, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
-            
-            tips = [
-                "1. Ensure good lighting",
-                "2. Face the camera directly", 
-                "3. Move closer to camera",
-                "4. Remove glasses/mask if worn"
-            ]
-            
-            for i, tip in enumerate(tips):
-                cv2.putText(img, tip, (10, 105 + i * 20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 100, 255), 1)
-        else:
-            # 显示检测成功信息
-            success_text = f"Successfully detected {len(faces)} face(s)!"
-            cv2.putText(img, success_text, (10, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
-        
-        except Exception as e:
-            # Show error on video for debugging
-            if debug_mode:
-                error_text = f"Detection error: {str(e)[:50]}"
-                cv2.putText(img, error_text, (10, 90), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 255), 1)
+            st.session_state.shared_data.update_emotion(current_emotion, confidence)
+            # Draw emotion label with better positioning
+            emotion_text = f"{current_emotion.title()}: {confidence:.2f}"
+            cv2.putText(img, emotion_text, (x, y+h+25), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 0, 255), 2)
+        # Fun emoji overlay
+        if current_effect == "Fun Emoji Overlay":
+            emoji_map = {
+                "happy": ":)", "sad": ":(", "angry": ">:(", 
+                "surprised": ":O", "neutral": ":|", "fear": ":S", "disgust": ":P"
+            }
+            # Get emotion from shared data or use random for demo
+            shared_data = st.session_state.shared_data.get_data()
+            emotion = shared_data.get('current_emotion', 'neutral')
+            emoji = emoji_map.get(emotion, ":)")
+            # Draw emoji text (using ASCII for better compatibility)
+            cv2.putText(img, emoji, (x+w//2-20, y+h//2), cv2.FONT_HERSHEY_SIMPLEX, 2, (0, 255, 255), 3)
+    # 如果没有检测到人脸，显示有用的调试信息
+    if len(faces) == 0:
+        help_text = "No faces detected - Tips:"
+        cv2.putText(img, help_text, (10, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 255), 2)
+        tips = [
+            "1. Ensure good lighting",
+            "2. Face the camera directly", 
+            "3. Move closer to camera",
+            "4. Remove glasses/mask if worn"
+        ]
+        for i, tip in enumerate(tips):
+            cv2.putText(img, tip, (10, 105 + i * 20), cv2.FONT_HERSHEY_SIMPLEX, 0.4, (0, 100, 255), 1)
+    else:
+        # 显示检测成功信息
+        success_text = f"Successfully detected {len(faces)} face(s)!"
+        cv2.putText(img, success_text, (10, 80), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 255, 0), 2)
     
     # Apply traditional effects
     if current_effect == "Flip Vertical":

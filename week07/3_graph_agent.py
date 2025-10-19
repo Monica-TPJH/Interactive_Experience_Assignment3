@@ -3,6 +3,7 @@ import requests
 from langchain_core.tools import tool
 from langgraph.prebuilt import create_react_agent
 import random
+## removed duplicate import
 
 config = {"configurable": {"thread_id": "1"}}
 
@@ -37,13 +38,14 @@ def check_lm_studio_models():
 print("🔍 正在检查LM Studio...")
 available_model = check_lm_studio_models()
 
+import sys
 if not available_model:
     print("\n💡 解决步骤:")
     print("   1. 打开LM Studio应用")
     print("   2. 在'模型'页面下载并加载一个模型")
     print("   3. 启动本地服务器 (在'开发者'页面)")
     print("   4. 重新运行此脚本")
-    exit(1)
+    sys.exit(1)
 
 print(f"✅ 使用模型: {available_model}")
 
