@@ -39,6 +39,9 @@ _ASSETS_DIR = _APP_DIR / "assets"
 _ASSETS_DIR.mkdir(parents=True, exist_ok=True)
 _LOCAL_BG_PATH = _ASSETS_DIR / "background.jpg"
 
+# Audio file types supported for local playback
+_ALLOWED_AUDIO_SUFFIXES = [".mp3", ".wav", ".ogg", ".m4a"]
+
 # Resolve background image as a data URI with local-cache preference
 bg_image_css = None
 try:
@@ -420,6 +423,45 @@ with tab_music:
     audio_file = st.file_uploader("Play a local audio file (temporary)", type=["mp3", "wav", "ogg", "m4a"], key="non_featured_audio")
     if audio_file is not None:
         st.audio(audio_file)
+
+    # Local music library (play directly from Website_AI/assets)
+    with st.expander("📁 Local music library"):
+        try:
+            library_files = [
+                p for p in _ASSETS_DIR.glob("*") if p.is_file() and p.suffix.lower() in _ALLOWED_AUDIO_SUFFIXES
+            ]
+        except Exception:
+            library_files = []
+        if library_files:
+            labels = [p.name for p in library_files]
+            default_index = 0
+            # Prefer highlighting "Snoopy on the Swings.mp3" if present
+            for i, name in enumerate(labels):
+                if name.lower() == "snoopy on the swings.mp3":
+                    default_index = i
+                    break
+            selected_label = st.selectbox(
+                "Choose a local audio file from Website_AI/assets",
+                labels,
+                index=default_index,
+                key="local_assets_library_select",
+            )
+            col_lb1, col_lb2 = st.columns([1, 4])
+            with col_lb1:
+                play_btn = st.button("Play selected", key="play_from_library")
+            with col_lb2:
+                if selected_label.lower() == "snoopy on the swings.mp3":
+                    st.caption("Ready: Snoopy on the Swings")
+            if play_btn and selected_label:
+                try:
+                    chosen = next((p for p in library_files if p.name == selected_label), None)
+                    if chosen is not None:
+                        data = chosen.read_bytes()
+                        st.audio(data)
+                except Exception as e:
+                    st.error(f"Failed to play from library: {e}")
+        else:
+            st.caption("No local audio files found in Website_AI/assets. Drop .mp3/.wav/.ogg/.m4a files there to see them here.")
 
     st.markdown("---")
     st.markdown("Or ask Snoopy to recommend a playlist for your mood:")
