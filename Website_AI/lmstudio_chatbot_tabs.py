@@ -2,6 +2,10 @@ import streamlit as st
 from openai import OpenAI
 from typing import List, Dict, Any
 import random
+import time
+import base64
+from pathlib import Path
+from urllib.request import urlopen, Request
 
 # -----------------------------
 # Page configuration
@@ -10,6 +14,182 @@ st.set_page_config(
     page_title="Snoopy's Playground",
     page_icon="🐶",
     layout="wide"
+)
+
+# Default appearance settings used by background CSS
+if "bg_opacity" not in st.session_state:
+    st.session_state["bg_opacity"] = 0.3  # initial default opacity (lighter background)
+if "bg_fit" not in st.session_state:
+    # How the background image scales:
+    # - "cover": fill screen, may crop (default)
+    # - "contain": show entire image, may leave bars
+    # - "100% 100%": stretch to fill exactly (may distort)
+    st.session_state["bg_fit"] = "cover"
+
+# -----------------------------
+# Global background styling (light base with Snoopy image)
+# -----------------------------
+BACKGROUND_IMAGE_URL = (
+    "https://www.xtrafondos.com/wallpapers/charlie-brown-y-snoopy-12601.jpg"
+)
+
+# Local cache path for background image
+_APP_DIR = Path(__file__).parent
+_ASSETS_DIR = _APP_DIR / "assets"
+_ASSETS_DIR.mkdir(parents=True, exist_ok=True)
+_LOCAL_BG_PATH = _ASSETS_DIR / "background.jpg"
+
+# Resolve background image as a data URI with local-cache preference
+bg_image_css = None
+try:
+    if _LOCAL_BG_PATH.exists():
+        with _LOCAL_BG_PATH.open("rb") as f:
+            data = f.read()
+        b64 = base64.b64encode(data).decode("utf-8")
+        bg_image_css = f"url('data:image/jpeg;base64,{b64}')"
+except Exception:
+    pass
+
+if bg_image_css is None:
+    # Try to fetch remotely and cache locally
+    try:
+        req = Request(
+            BACKGROUND_IMAGE_URL,
+            headers={
+                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+                "Referer": "https://www.xtrafondos.com/",
+                "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+            },
+        )
+        with urlopen(req, timeout=6) as resp:
+            data = resp.read()
+            # Cache for future runs
+            try:
+                with _LOCAL_BG_PATH.open("wb") as f:
+                    f.write(data)
+            except Exception:
+                pass
+            content_type = resp.headers.get("Content-Type") or "image/jpeg"
+            b64 = base64.b64encode(data).decode("utf-8")
+            bg_image_css = f"url('data:{content_type};base64,{b64}')"
+    except Exception:
+        # Fallback to using the direct URL if all else fails
+        bg_image_css = f"url('{BACKGROUND_IMAGE_URL}')"
+
+# If user provided a custom background this session, prefer it
+custom_b64 = st.session_state.get("custom_bg_b64")
+if custom_b64:
+    bg_image_css = f"url('data:image/*;base64,{custom_b64}')"
+
+st.markdown(
+    f"""
+    <style>
+    /* Keep global backgrounds transparent so the fixed layer shows */
+    html, body, .stApp, [data-testid="stAppViewContainer"] {{
+        background: transparent !important;
+        height: 100% !important;
+        min-height: 100vh !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow-x: hidden !important; /* prevent horizontal scroll */
+    }}
+
+    /* Ensure sizing doesn't cause overflow */
+    *, *::before, *::after {{
+        box-sizing: border-box;
+    }}
+
+    /* Prevent transformed ancestors from breaking fixed positioning on some browsers */
+    .stApp, [data-testid="stAppViewContainer"] {{
+        transform: none !important;
+    }}
+
+    /* Fallback on body in case container background is overridden */
+    body {{
+        background-color: transparent !important;
+    }}
+
+    /* Make top header transparent so the background shows through */
+    [data-testid="stHeader"] {{
+        background: rgba(255,255,255,0);
+    }}
+
+    /* Lighten the sidebar area for readability */
+    [data-testid="stSidebar"] > div:first-child {{
+        background-color: rgba(255,255,255,0.60);
+        backdrop-filter: blur(2px);
+    }}
+
+    /* Ensure main content area doesn't cover the background */
+    .stApp {{
+        position: relative !important;
+    }}
+    [data-testid="stAppViewContainer"], [data-testid="stHeader"], [data-testid="stSidebar"] {{
+        position: relative !important;
+        z-index: 1 !important;
+    }}
+    [data-testid="stAppViewContainer"] > .main {{
+        background: transparent !important;
+        max-width: 100% !important;
+        overflow-x: hidden !important;
+    }}
+
+    /* Slight blur on main content container to improve contrast */
+    .block-container {{
+        background-color: rgba(255,255,255,0.0) !important;
+        backdrop-filter: blur(1.5px);
+        max-width: 100% !important;
+        overflow-x: hidden !important;
+    }}
+
+    /* Keep media within viewport width */
+    .stApp img, .stApp video {{
+        max-width: 100% !important;
+        height: auto !important;
+    }}
+
+    /* Wrap long text so it doesn't overflow horizontally */
+    [data-testid="stMarkdownContainer"] {{
+        overflow-wrap: anywhere;
+        word-break: break-word;
+    }}
+    .stMarkdown pre {{
+        max-width: 100% !important;
+        overflow-x: auto !important; /* scroll inside code blocks, not page */
+    }}
+
+    /* Root-level background to persist during scroll */
+    html::before {{
+        content: "";
+        position: fixed;
+        inset: 0;
+        background-image: {bg_image_css};
+        background-size: {st.session_state.get('bg_fit', 'cover')};
+        background-position: center;
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+        opacity: {st.session_state.get('bg_opacity', 0.7)};
+        z-index: 0;
+        pointer-events: none;
+    }}
+
+    /* Fixed background layer with adjustable transparency (kept as a fallback) */
+    #bg-layer {{
+        position: fixed;
+        inset: 0;
+        background-image: {bg_image_css};
+        background-size: {st.session_state.get('bg_fit', 'cover')};
+        background-position: center;
+        background-repeat: no-repeat;
+        background-attachment: fixed;
+        opacity: {st.session_state.get('bg_opacity', 0.7)};
+        z-index: 0;
+        pointer-events: none;
+    }}
+    </style>
+    <div id="bg-layer"></div>
+    """,
+    unsafe_allow_html=True,
 )
 
 # -----------------------------
@@ -28,7 +208,8 @@ if "game_state" not in st.session_state:
         "lives": 3,
         "time_left": 60,
         "game_active": False,
-        "mines": []
+        "mines": [],
+        "last_tick": None
     }
 
 # -----------------------------
@@ -80,6 +261,39 @@ st.sidebar.markdown(f"### {robot_info['icon']} {selected_robot}")
 st.sidebar.write(robot_info['description'])
 
 st.sidebar.markdown("---")
+
+# Appearance controls
+with st.sidebar.expander("🎨 Appearance"):
+    uploaded_bg = st.file_uploader("Custom background image", type=["jpg", "jpeg", "png", "webp"])
+    new_opacity = st.slider("Background opacity (higher = stronger image)", 0.3, 1.0, st.session_state.get("bg_opacity", 0.7), 0.05)
+    # Background fit mode control
+    fit_options = {
+        "Cover (fill screen, may crop)": "cover",
+        "Contain (show all, may add bars)": "contain",
+        "Stretch (fill exactly, may distort)": "100% 100%",
+    }
+    current_fit_value = st.session_state.get("bg_fit", "cover")
+    # Find the label that corresponds to the current value
+    current_fit_label = next((k for k, v in fit_options.items() if v == current_fit_value), "Cover (fill screen, may crop)")
+    selected_fit_label = st.selectbox("Background fit", list(fit_options.keys()), index=list(fit_options.keys()).index(current_fit_label))
+    selected_fit_value = fit_options[selected_fit_label]
+    if selected_fit_value != current_fit_value:
+        st.session_state["bg_fit"] = selected_fit_value
+        st.rerun()
+    if new_opacity != st.session_state.get("bg_opacity", 0.7):
+        st.session_state["bg_opacity"] = new_opacity
+        st.rerun()
+    if uploaded_bg is not None:
+        if st.button("Use this background"):
+            data = uploaded_bg.read()
+            try:
+                with _LOCAL_BG_PATH.open("wb") as f:
+                    f.write(data)
+            except Exception:
+                pass
+            st.session_state["custom_bg_b64"] = base64.b64encode(data).decode("utf-8")
+            st.success("Background updated!")
+            st.rerun()
 
 # Chat Sessions Management
 st.sidebar.markdown("### 💬 Chat Sessions")
@@ -262,6 +476,7 @@ with tab_game:
             game_state["time_left"] = 60
             game_state["game_active"] = True
             game_state["last_result"] = None
+            game_state["last_tick"] = time.monotonic()
             game_state["mines"] = [
                 {"type": "gold", "value": random.randint(50, 200), "size": random.choice(["small", "medium", "large"])}
                 for _ in range(6)
@@ -279,6 +494,25 @@ with tab_game:
                     "level": game_state.get("level", 1),
                     "lives": game_state.get("lives", 0),
                     "ended_by": "stopped"
+                }
+
+    # Countdown timer tick (runs each render while game is active)
+    if game_state.get("game_active"):
+        now = time.monotonic()
+        last_tick = game_state.get("last_tick") or now
+        elapsed = int(now - last_tick)
+        if elapsed > 0:
+            # Decrease remaining time by elapsed seconds
+            game_state["time_left"] = max(0, game_state.get("time_left", 0) - elapsed)
+            game_state["last_tick"] = last_tick + elapsed
+            # If time runs out, end the game
+            if game_state["time_left"] <= 0:
+                game_state["game_active"] = False
+                game_state["last_result"] = {
+                    "score": game_state.get("score", 0),
+                    "level": game_state.get("level", 1),
+                    "lives": game_state.get("lives", 0),
+                    "ended_by": "timeout"
                 }
 
     st.markdown("---")
@@ -328,6 +562,11 @@ with tab_game:
                         "size": random.choice(["small", "medium", "large"])
                     }
 
+        # Auto-refresh the page every second while the game is active to update the countdown
+        if game_state.get("game_active"):
+            time.sleep(1)
+            st.rerun()
+
     else:
         # Post-game summary if available
         last_result = game_state.get("last_result")
@@ -342,6 +581,8 @@ with tab_game:
                 st.error("Ended because: Out of lives 🥲")
             elif reason == "stopped":
                 st.info("Ended because: Stopped manually ⏹️")
+            elif reason == "timeout":
+                st.warning("Ended because: Time ran out ⏰")
             else:
                 st.warning(f"Ended because: {reason}")
             st.markdown("---")
