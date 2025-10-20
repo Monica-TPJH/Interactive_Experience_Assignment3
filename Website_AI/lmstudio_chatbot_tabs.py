@@ -7,7 +7,7 @@ import random
 # Page configuration
 # -----------------------------
 st.set_page_config(
-    page_title="Snoopy's best helper - Tabs",
+    page_title="Snoopy's Playground",
     page_icon="🐶",
     layout="wide"
 )
@@ -142,7 +142,7 @@ client = OpenAI(base_url=server_url, api_key=api_key)
 # Header
 # -----------------------------
 robot_info = ROBOTS[st.session_state["current_robot"]]
-st.title(f"🐕 Snoopy's Best Helper - {robot_info['icon']} {st.session_state['current_robot']}")
+st.title(f"🐕 Snoopy's Playground - {robot_info['icon']} {st.session_state['current_robot']}")
 st.caption(f"🎾 Your faithful AI companion | {robot_info['description']} | Session: {st.session_state['current_session']}")
 
 # Ensure current session exists with intro message
@@ -161,7 +161,7 @@ def get_messages_with_system_prompt() -> List[Dict[str, str]]:
 # -----------------------------
 # Main tabs in chat area
 # -----------------------------
-tab_chat, tab_music, tab_video, tab_game, tab_article = st.tabs(["Chat", "Music", "Video", "Game", "Article"])
+tab_chat, tab_music, tab_video, tab_game, tab_article, tab_fortune = st.tabs(["Chat", "Music", "Video", "Game", "Article", "Fortune"])
 
 # --- Chat tab ---
 with tab_chat:
@@ -261,6 +261,7 @@ with tab_game:
             game_state["lives"] = 3
             game_state["time_left"] = 60
             game_state["game_active"] = True
+            game_state["last_result"] = None
             game_state["mines"] = [
                 {"type": "gold", "value": random.randint(50, 200), "size": random.choice(["small", "medium", "large"])}
                 for _ in range(6)
@@ -271,7 +272,14 @@ with tab_game:
         
     with col_g2:
         if st.button("🛑 Stop Game", key="stop_game_main"):
-            game_state["game_active"] = False
+            if game_state.get("game_active"):
+                game_state["game_active"] = False
+                game_state["last_result"] = {
+                    "score": game_state.get("score", 0),
+                    "level": game_state.get("level", 1),
+                    "lives": game_state.get("lives", 0),
+                    "ended_by": "stopped"
+                }
 
     st.markdown("---")
 
@@ -306,6 +314,12 @@ with tab_game:
                         st.error("🪨 Hit a rock! -1 life!")
                         if game_state["lives"] <= 0:
                             game_state["game_active"] = False
+                            game_state["last_result"] = {
+                                "score": game_state.get("score", 0),
+                                "level": game_state.get("level", 1),
+                                "lives": game_state.get("lives", 0),
+                                "ended_by": "no_lives"
+                            }
                             st.error("💀 Game Over! Snoopy needs more practice!")
 
                     game_state["mines"][i] = {
@@ -315,7 +329,83 @@ with tab_game:
                     }
 
     else:
+        # Post-game summary if available
+        last_result = game_state.get("last_result")
+        if last_result:
+            st.markdown("## 🎮 Round Summary")
+            c1, c2, c3 = st.columns(3)
+            c1.metric("💰 Score", last_result.get("score", 0))
+            c2.metric("📈 Level", last_result.get("level", 1))
+            c3.metric("❤️ Lives Left", last_result.get("lives", 0))
+            reason = last_result.get("ended_by", "unknown")
+            if reason == "no_lives":
+                st.error("Ended because: Out of lives 🥲")
+            elif reason == "stopped":
+                st.info("Ended because: Stopped manually ⏹️")
+            else:
+                st.warning(f"Ended because: {reason}")
+            st.markdown("---")
         st.info("Click Start Game to begin mining for gold!")
+
+# --- Fortune tab ---
+with tab_fortune:
+    st.subheader("🔮 Fortune")
+    st.markdown("Choose a way to check today's fortune, or ask Snoopy a question:")
+
+    col_f1, col_f2, col_f3 = st.columns(3)
+    with col_f1:
+        if st.button("🌟 Daily Fortune"):
+            fortunes = [
+                "Great day to start something new—your smile brings luck!",
+                "Mind the details and you'll dodge small bumps.",
+                "A helpful person may appear—take initiative!",
+                "Perfect for learning and organizing—solid gains.",
+                "Be patient—good news is on the way.",
+                "Time with friends recharges you—good vibes ahead.",
+                "Express and create—ideas will flow today.",
+            ]
+            st.success(f"Today's fortune: {random.choice(fortunes)}")
+    with col_f2:
+        if st.button("🎴 Draw a Tarot Card"):
+            cards = [
+                "☀️ The Sun: vitality, success, and warmth.",
+                "⭐ The Star: hope, inspiration, and healing.",
+                "🌍 The World: completion, wholeness, new phase.",
+                "🏆 Ace of Cups: new emotional beginning, inspiration.",
+                "🪄 The Magician: agency and manifesting power.",
+                "👑 Queen of Wands: confidence, passion, creativity.",
+                "💖 Ten of Cups: family harmony and inner contentment.",
+            ]
+            st.info(f"Your card: {random.choice(cards)}")
+    with col_f3:
+        st.write(" ")
+
+    st.markdown("---")
+    st.markdown("If you have a specific question, ask Snoopy for a reading:")
+    q = st.text_input("Your question (optional)")
+    if st.button("💬 Get Reading"):
+        try:
+            sys_prompt = (
+                "You are a warm, encouraging fortune advisor. Offer positive, practical guidance. "
+                "If the user has no clear question, share a short daily fortune and a tip. "
+                "If there is a question, first reassure them, then provide direction and cautions."
+            )
+            messages = [
+                {"role": "system", "content": sys_prompt},
+            ]
+            if q:
+                messages.append({"role": "user", "content": f"Question: {q}"})
+            else:
+                messages.append({"role": "user", "content": "Please give me today's fortune and advice."})
+
+            resp = client.chat.completions.create(
+                model=model_name,
+                messages=messages,
+                stream=True,
+            )
+            st.write_stream((getattr(c.choices[0].delta, "content", None) or "") for c in resp)
+        except Exception as e:
+            st.error(f"Reading failed: {e}")
 
 # --- Article tab ---
 with tab_article:
