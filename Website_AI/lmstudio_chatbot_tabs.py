@@ -39,19 +39,6 @@ _ASSETS_DIR = _APP_DIR / "assets"
 _ASSETS_DIR.mkdir(parents=True, exist_ok=True)
 _LOCAL_BG_PATH = _ASSETS_DIR / "background.jpg"
 
-# Featured audio persistence helpers
-_ALLOWED_AUDIO_SUFFIXES = [".mp3", ".wav", ".ogg", ".m4a"]
-_FEATURED_AUDIO_BASENAME = "featured"
-
-def _find_featured_audio_file():
-    try:
-        for p in _ASSETS_DIR.glob(f"{_FEATURED_AUDIO_BASENAME}.*"):
-            if p.suffix.lower() in _ALLOWED_AUDIO_SUFFIXES and p.is_file():
-                return p
-    except Exception:
-        pass
-    return None
-
 # Resolve background image as a data URI with local-cache preference
 bg_image_css = None
 try:
@@ -225,15 +212,7 @@ if "game_state" not in st.session_state:
         "last_tick": None
     }
 
-# Attempt to auto-load a persisted featured audio on first load of session
-if "featured_snoopy_audio" not in st.session_state:
-    _fa = _find_featured_audio_file()
-    if _fa:
-        try:
-            st.session_state["featured_snoopy_audio"] = _fa.read_bytes()
-            st.session_state["featured_snoopy_audio_path"] = str(_fa)
-        except Exception:
-            pass
+# (Music is local-only temporary playback; no featured audio persistence.)
 
 # -----------------------------
 # Robot configurations
@@ -437,127 +416,10 @@ with tab_music:
     st.subheader("🎵 Music")
     st.markdown("Local-only playback (no external websites). Upload local audio to play.")
 
-    # Featured track (local only)
-    st.markdown("#### 🎼 Featured: Snoopy on the Swings")
-    # Option A: Use a local audio file as Featured
-    featured_local = st.session_state.get("featured_snoopy_audio")
-    cfeat1, cfeat2 = st.columns([3, 1])
-    with cfeat1:
-        local_featured_upload = st.file_uploader(
-            "Upload local audio for Featured (mp3/wav/ogg/m4a)",
-            type=["mp3", "wav", "ogg", "m4a"],
-            key="featured_audio_uploader",
-        )
-    with cfeat2:
-        if featured_local is not None:
-            if st.button("Remove Featured"):
-                # Remove from session and delete any persisted featured.* file
-                st.session_state.pop("featured_snoopy_audio", None)
-                st.session_state.pop("featured_snoopy_audio_path", None)
-                try:
-                    for p in _ASSETS_DIR.glob(f"{_FEATURED_AUDIO_BASENAME}.*"):
-                        if p.suffix.lower() in _ALLOWED_AUDIO_SUFFIXES:
-                            p.unlink(missing_ok=True)
-                except Exception:
-                    pass
-                st.rerun()
-        else:
-            if local_featured_upload is not None and st.button("Use as Featured"):
-                try:
-                    data = local_featured_upload.read()
-                    st.session_state["featured_snoopy_audio"] = data
-                    # Persist to assets as featured.<ext>
-                    # Prefer extension from filename; fallback via MIME type
-                    ext = Path(local_featured_upload.name).suffix.lower()
-                    if not ext:
-                        mime = getattr(local_featured_upload, "type", "").lower()
-                        mime_map = {
-                            "audio/mpeg": ".mp3",
-                            "audio/mp3": ".mp3",
-                            "audio/wav": ".wav",
-                            "audio/x-wav": ".wav",
-                            "audio/ogg": ".ogg",
-                            "audio/x-m4a": ".m4a",
-                            "audio/aac": ".m4a",
-                            "audio/mp4": ".m4a",
-                        }
-                        ext = mime_map.get(mime, ".mp3")
-                    if ext not in _ALLOWED_AUDIO_SUFFIXES:
-                        ext = ".mp3"
-                    # Remove old featured files
-                    try:
-                        for p in _ASSETS_DIR.glob(f"{_FEATURED_AUDIO_BASENAME}.*"):
-                            if p.suffix.lower() in _ALLOWED_AUDIO_SUFFIXES:
-                                p.unlink(missing_ok=True)
-                    except Exception:
-                        pass
-                    out_path = _ASSETS_DIR / f"{_FEATURED_AUDIO_BASENAME}{ext}"
-                    try:
-                        with out_path.open("wb") as f:
-                            f.write(data)
-                        st.session_state["featured_snoopy_audio_path"] = str(out_path)
-                    except Exception as e:
-                        st.warning(f"Saved locally but could not persist to assets: {e}")
-                    st.rerun()
-                except Exception as e:
-                    st.error(f"Failed to set featured audio: {e}")
-
-    if st.session_state.get("featured_snoopy_audio") is not None:
-        st.audio(st.session_state["featured_snoopy_audio"])
-        current_fp = st.session_state.get("featured_snoopy_audio_path")
-        if current_fp:
-            st.caption(f"Playing local Featured track (saved: {Path(current_fp).name}).")
-        else:
-            st.caption("Playing local Featured track.")
-    else:
-        # Local-only: No featured file yet
-        st.info("No Featured track yet. Upload a local file above and click 'Use as Featured'. This app does not use external music websites.")
-
     # Quick play (local only, not persisted)
     audio_file = st.file_uploader("Play a local audio file (temporary)", type=["mp3", "wav", "ogg", "m4a"], key="non_featured_audio")
     if audio_file is not None:
         st.audio(audio_file)
-
-    # Local assets library to set an existing file as Featured
-    with st.expander("📁 Local assets library"):
-        try:
-            library_files = [
-                p for p in _ASSETS_DIR.glob("*")
-                if p.is_file() and p.suffix.lower() in _ALLOWED_AUDIO_SUFFIXES and _FEATURED_AUDIO_BASENAME not in p.stem
-            ]
-        except Exception:
-            library_files = []
-        if library_files:
-            labels = [p.name for p in library_files]
-            selected_label = st.selectbox("Choose a local audio file from Website_AI/assets", labels, key="assets_library_select")
-            if st.button("Set selected as Featured", key="assets_library_set_btn") and selected_label:
-                try:
-                    chosen = next((p for p in library_files if p.name == selected_label), None)
-                    if chosen is not None:
-                        data = chosen.read_bytes()
-                        st.session_state["featured_snoopy_audio"] = data
-                        # Remove old featured files
-                        try:
-                            for p in _ASSETS_DIR.glob(f"{_FEATURED_AUDIO_BASENAME}.*"):
-                                if p.suffix.lower() in _ALLOWED_AUDIO_SUFFIXES:
-                                    p.unlink(missing_ok=True)
-                        except Exception:
-                            pass
-                        ext = chosen.suffix.lower()
-                        if ext not in _ALLOWED_AUDIO_SUFFIXES:
-                            ext = ".mp3"
-                        out_path = _ASSETS_DIR / f"{_FEATURED_AUDIO_BASENAME}{ext}"
-                        try:
-                            with out_path.open("wb") as f:
-                                f.write(data)
-                            st.session_state["featured_snoopy_audio_path"] = str(out_path)
-                        except Exception as e:
-                            st.warning(f"Saved locally but could not persist to assets: {e}")
-                        st.rerun()
-                except Exception as e:
-                    st.error(f"Failed to set Featured from library: {e}")
-        else:
-            st.caption("No local audio files found in Website_AI/assets (besides Featured). You can drop files there and they will appear here.")
 
     st.markdown("---")
     st.markdown("Or ask Snoopy to recommend a playlist for your mood:")
