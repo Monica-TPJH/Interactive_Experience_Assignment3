@@ -422,7 +422,28 @@ with tab_music:
     # Quick play (local only, not persisted)
     audio_file = st.file_uploader("Play a local audio file (temporary)", type=["mp3", "wav", "ogg", "m4a"], key="non_featured_audio")
     if audio_file is not None:
-        st.audio(audio_file)
+        try:
+            data = audio_file.read()
+            # Play immediately
+            st.audio(data)
+
+            # Also add to local library (save to Website_AI/assets)
+            raw_name = Path(audio_file.name).name or "uploaded"
+            ext = Path(raw_name).suffix.lower()
+            if ext not in _ALLOWED_AUDIO_SUFFIXES:
+                ext = ".mp3"
+            base = Path(raw_name).stem or "uploaded"
+            out_path = _ASSETS_DIR / f"{base}{ext}"
+            # Ensure we don't overwrite existing files
+            counter = 1
+            while out_path.exists():
+                out_path = _ASSETS_DIR / f"{base}_{counter}{ext}"
+                counter += 1
+            with out_path.open("wb") as f:
+                f.write(data)
+            st.success(f"Added to local library: {out_path.name}")
+        except Exception as e:
+            st.warning(f"Played successfully, but could not add to library: {e}")
 
     # Local music library (play directly from Website_AI/assets)
     with st.expander("📁 Local music library"):
