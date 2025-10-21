@@ -327,18 +327,22 @@ class PixelCarChaseDogGame:
             info_bg_pattern.append(row)
         self.info_bg_pixels = self.create_pixel_sprite(info_x, info_y, info_bg_pattern, info_size)
 
+        # 音量可视化：放在信息框右侧，紧挨着信息栏
         volume_bg_pattern = []
         for y in range(4):
             row = []
             for x in range(25):
                 row.append('yellow' if (y == 0 or y == 3 or x == 0 or x == 24) else 'black')
             volume_bg_pattern.append(row)
-        self.volume_bg_pixels = self.create_pixel_sprite(6.5, 7.2, volume_bg_pattern, 0.06)
+        volume_x = info_x + info_cols * info_size + 0.12  # 紧邻信息栏，右侧留一点间距
+        volume_y = info_y + 0.40                          # 与原来大致同高度
+        volume_cell = 0.06
+        self.volume_bg_pixels = self.create_pixel_sprite(volume_x, volume_y, volume_bg_pattern, volume_cell)
 
         # 严格限制在边框内部，最多100%
         self.volume_pixels = []
         for i in range(23):
-            pixel = self.create_pixel_block(6.5 + 0.06 + i * 0.06, 7.2 + 0.06, 0.06, 'lime')
+            pixel = self.create_pixel_block(volume_x + volume_cell + i * volume_cell, volume_y + volume_cell, volume_cell, 'lime')
             pixel.set_alpha(0)
             self.volume_pixels.append(pixel)
 
@@ -350,8 +354,12 @@ class PixelCarChaseDogGame:
             color='lime', family='monospace',
             verticalalignment='top'
         )
-        self.volume_text = self.ax.text(6.6, 7.6, 'VOLUME', fontsize=12, fontweight='bold',
-                                        color='yellow', family='monospace')
+        # 标题放在音量条上方一些
+        self.volume_text = self.ax.text(
+            volume_x + 0.10, volume_y + volume_cell * 6,
+            'VOLUME', fontsize=12, fontweight='bold',
+            color='yellow', family='monospace'
+        )
 
         self.hud_groups = [self.info_bg_pixels, self.volume_bg_pixels, self.volume_pixels]
         self.hud_texts = [self.info_text, self.volume_text]
@@ -516,7 +524,11 @@ class PixelCarChaseDogGame:
     def update_volume_display(self, volume_level):
         """更新音量显示"""
         volume_level = max(0.0, min(float(volume_level), 1.0))
-        active_pixels = int(volume_level * len(self.volume_pixels))
+        total = len(self.volume_pixels)
+        # 形态仅在0%~50%范围增长；超过50%时只改变颜色，不再增加长度
+        cap = max(1, int(0.5 * total))
+        active_pixels = int(volume_level * total)
+        active_pixels = min(active_pixels, cap)
         if volume_level > 0.0 and active_pixels == 0:
             active_pixels = 1
         for i, pixel in enumerate(self.volume_pixels):
