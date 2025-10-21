@@ -46,10 +46,10 @@ class PixelCarChaseDogGame:
 
         # 速度参数
         self.car_speed = 0.0
-        # 车速稍微慢一点，且会随时间逐渐变快
-        self.min_car_speed = 0.002
-        self.max_car_speed = 0.20
-        self.car_accel = 0.0002  # 车辆时间加速度
+        # 车速更快，并随时间变快（后期更快）
+        self.min_car_speed = 0.05
+        self.max_car_speed = 0.45
+        self.car_accel = 0.0018  # 车辆时间加速度（更快的加速）
 
         # 小狗速度由音量控制（越大越快）
         self.dog_min_speed = 0.05
@@ -64,9 +64,9 @@ class PixelCarChaseDogGame:
         self.FORMAT = pyaudio.paInt16  # 16-bit PCM
 
         # 音量控制（归一化到0..1）
-        self.volume_threshold = 0.0003
+        self.volume_threshold = 0.0008
         self.max_volume = 0.04
-        self.volume_history = [0.0] * 8
+        self.volume_history = [0.0] * 12
 
         # 摄像机固定在初始画面
         self.prev_camera_left = 0.0
@@ -75,7 +75,7 @@ class PixelCarChaseDogGame:
 
         # 终点：小狗的目标线
         self.finish_x = self.GAME_WIDTH - 1.0
-        # 规则调整：不要撞到小狗，小狗安全到达终点即胜利
+        # 规则：不要撞到小狗，小狗安全到达终点即胜利
         self.mission_success = False  # True: 小狗安全到达终点
         self.dog_escaped = False      # True: 小狗到达终点
         self.dog_hit = False          # True: 车辆撞到小狗（失败）
@@ -279,7 +279,7 @@ class PixelCarChaseDogGame:
             ['T', 'car_red', 'white', 'white', 'white', 'car_red', 'T'],
             ['car_red', 'white', 'car_blue', 'car_blue', 'car_blue', 'white', 'car_red'],
             ['car_red', 'car_red', 'car_red', 'car_red', 'car_red', 'car_red', 'car_red'],
-            ['black', 'T', 'black', 'T', 'black', 'T', 'black'],
+            ['T', 'T', 'black', 'T', 'black', 'T', 'T'],
         ]
         self.car_pixels = self.create_pixel_sprite(
             self.car_x - len(car_pattern[0]) * self.PIXEL_SIZE / 2,
@@ -453,7 +453,7 @@ class PixelCarChaseDogGame:
             ['T', 'car_red', 'white', 'white', 'white', 'car_red', 'T'],
             ['car_red', 'white', 'car_blue', 'car_blue', 'car_blue', 'white', 'car_red'],
             ['car_red', 'car_red', 'car_red', 'car_red', 'car_red', 'car_red', 'car_red'],
-            ['black', 'T', 'black', 'T', 'black', 'T', 'black'],
+            ['T', 'T', 'black', 'T', 'black', 'T', 'T'],
         ]
         self.car_pixels = self.create_pixel_sprite(
             self.car_x - len(car_pattern[0]) * self.PIXEL_SIZE / 2,
@@ -605,8 +605,7 @@ class PixelCarChaseDogGame:
             f"SPEED: {self.car_speed*1000:.0f}\n"
             f"DOG: {self.dog_speed*1000:.0f}\n"
             f"GAP: {gap:.1f}M  LEFT:{to_finish:.1f}M\n"
-            f"VOL: {min(int(round(volume_level*100)), 100)}%  RAW:{raw_vol:.3f}\n"
-            f"TIME: {self.game_time//50:.0f}S"
+            f"VOL: {min(int(round(volume_level*100)), 100)}%  RAW:{raw_vol:.3f}"
         )
         self.info_text.set_text(info_text)
 
