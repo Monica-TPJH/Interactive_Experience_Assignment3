@@ -25,10 +25,15 @@ except Exception:
     raise
 
 try:
-    from pixel_car_chase_dog import PixelCarChaseDogGame
+    # 首选直接导入同目录模块
+    from Pixel_Dog_Run import PixelCarChaseDogGame
 except Exception:
-    # 兼容从项目根目录运行
-    from Audio_Game.pixel_car_chase_dog import PixelCarChaseDogGame
+    # 退回使用 importlib 尝试包名导入，避免静态检查报错
+    import importlib
+    try:
+        PixelCarChaseDogGame = importlib.import_module('Audio_Game.Pixel_Dog_Run').PixelCarChaseDogGame
+    except Exception as _e:
+        raise ImportError("无法导入游戏主模块 PixelCarChaseDogGame，请确保 Audio_Game/Pixel_Dog_Run.py 可用") from _e
 
 
 def _largest_face(faces: np.ndarray) -> Optional[Tuple[int, int, int, int]]:
@@ -153,7 +158,7 @@ def choose_image_as_avatar() -> np.ndarray:
         from tkinter import filedialog
         root = tk.Tk()
         root.withdraw()
-        img_path = filedialog.askOpenFileDialog(title='选择头像图片')  # type: ignore[attr-defined]
+        img_path = filedialog.askopenfilename(title='选择头像图片')
     except Exception:
         # 某些环境没有Tk，退回命令行
         pass

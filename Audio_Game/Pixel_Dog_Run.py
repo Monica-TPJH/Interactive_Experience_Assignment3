@@ -1,7 +1,7 @@
-#!/usr/bin/env python3
+
 """
-Pixel Car Chase Dog Game - 像素风车追狗游戏
-8-bit style sound-controlled chasing game where you (the car) must catch the dog
+Pixel Dog Run - 像素风小狗快跑游戏
+8-bit style sound-controlled chasing game where you (the dog) must avoid the car
 
 控制方式：
 - 声音越大：小狗越快
@@ -51,13 +51,16 @@ class PixelCarChaseDogGame:
         self.car_speed = 0.0
         # 车速更快，并随时间变快（后期更快）
         self.min_car_speed = 0.05
-        self.max_car_speed = 0.45
-        self.car_accel = 0.0018  # 车辆时间加速度（更快的加速）
+        self.max_car_speed = 0.60
+        self.car_accel = 0.0014  # 车辆时间加速度（初期斜率，稍慢）
+        # 后期加速阶段（让后期更快）：约10秒后提升加速度
+        self.late_game_frames = 400  # 约 400*25ms ≈ 10s 后
+        self.late_car_accel = 0.0019  # 后期斜率稍慢
         
-        # 小狗速度由音量控制（越大越快） — 略微降低整体速度并柔化响应
+        # 小狗速度由音量控制（越大越快） — 适当放慢增长速度并柔化响应
         self.dog_min_speed = 0.03
-        self.dog_max_speed = 0.14
-        self.dog_speed_exponent = 1.4  # >1 使中低音量时更慢，避免过快
+        self.dog_max_speed = 0.125
+        self.dog_speed_exponent = 1.6  # 略增大指数：中段更慢，整体更稳
         self.dog_speed = self.dog_min_speed
 
         self.score = 0
@@ -67,10 +70,10 @@ class PixelCarChaseDogGame:
         # 音频控制参数
         self.FORMAT = pyaudio.paInt16  # 16-bit PCM
 
-        # 音量控制（归一化到0..1）
-        self.volume_threshold = 0.0008
-        self.max_volume = 0.04
-        self.volume_history = [0.0] * 12
+        # 音量控制（归一化到0..1）——降低敏感度：提高门限、扩大归一化分母、加长平滑窗口
+        self.volume_threshold = 0.004   # 原 0.0008 → 更不易触发
+        self.max_volume = 0.06            # 原 0.04 → 同样RMS得到更低的归一化值
+        self.volume_history = [0.0] * 20 # 原 12 帧 → 更平滑、更稳
 
         # 摄像机固定在初始画面
         self.prev_camera_left = 0.0
@@ -187,13 +190,19 @@ class PixelCarChaseDogGame:
 
         plt.tight_layout()
 
-    def create_pixel_block(self, x, y, size, color, edge_color=None):
-        """创建单个像素块"""
+    def create_pixel_block(self, x, y, size, color, edge_color=None, linewidth=1, antialiased=None):
+        """创建单个像素块
+        可选参数：
+        - edge_color: 边框颜色（默认与填充色相同）
+        - linewidth: 边框线宽
+        - antialiased: 是否抗锯齿（None 表示使用默认，False 可获得更“像素”的锐利边缘）
+        """
         if edge_color is None:
             edge_color = color
-        pixel = patches.Rectangle((x, y), size, size,
-                                  facecolor=color, edgecolor=edge_color,
-                                  linewidth=1)
+        rect_kwargs = dict(facecolor=color, edgecolor=edge_color, linewidth=linewidth)
+        if antialiased is not None:
+            rect_kwargs["antialiased"] = antialiased
+        pixel = patches.Rectangle((x, y), size, size, **rect_kwargs)
         self.ax.add_patch(pixel)
         return pixel
 
@@ -342,7 +351,16 @@ class PixelCarChaseDogGame:
         # 严格限制在边框内部，最多100%
         self.volume_pixels = []
         for i in range(23):
-            pixel = self.create_pixel_block(volume_x + volume_cell + i * volume_cell, volume_y + volume_cell, volume_cell, 'lime')
+            # 进度条像素：黑色描边，关闭抗锯齿，显得更“像素风”
+            pixel = self.create_pixel_block(
+                volume_x + volume_cell + i * volume_cell,
+                volume_y + volume_cell,
+                volume_cell,
+                'lime',
+                edge_color='black',
+                linewidth=1.2,
+                antialiased=False
+            )
             pixel.set_alpha(0)
             self.volume_pixels.append(pixel)
 
@@ -427,7 +445,14 @@ class PixelCarChaseDogGame:
 
         # 车辆速度：随时间逐渐变快，直到最大值（首帧不叠加加速度，避免突兀加速感）
         effective_time = max(0, self.game_time - 1)
-        self.car_speed = min(self.min_car_speed + self.car_accel * effective_time, self.max_car_speed)
+        # 分段加速：前期使用 car_accel，超过阈值后使用 late_car_accel（避免斜率回溯导致突然跳变）
+        if effective_time <= self.late_game_frames:
+            car_v = self.min_car_speed + self.car_accel * effective_time
+        else:
+            car_v = (self.min_car_speed
+                     + self.car_accel * self.late_game_frames
+                     + self.late_car_accel * (effective_time - self.late_game_frames))
+        self.car_speed = min(car_v, self.max_car_speed)
 
         # 小狗速度：由音量控制（越大越快），应用次线性映射减弱中段速度
         level_adj = volume_level ** self.dog_speed_exponent
@@ -525,10 +550,8 @@ class PixelCarChaseDogGame:
         """更新音量显示"""
         volume_level = max(0.0, min(float(volume_level), 1.0))
         total = len(self.volume_pixels)
-        # 形态仅在0%~50%范围增长；超过50%时只改变颜色，不再增加长度
-        cap = max(1, int(0.5 * total))
+        # 形态按0%~100%线性增长，满格对应100%
         active_pixels = int(volume_level * total)
-        active_pixels = min(active_pixels, cap)
         if volume_level > 0.0 and active_pixels == 0:
             active_pixels = 1
         for i, pixel in enumerate(self.volume_pixels):
