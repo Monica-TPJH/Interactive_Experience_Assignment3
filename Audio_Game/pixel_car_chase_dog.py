@@ -6,7 +6,7 @@ Pixel Car Chase Dog Game - 像素风车追狗游戏
 控制方式：
 - 声音越大：车辆越快
 - 安静：车辆慢速移动
-- 目标：追上前方的小狗，别让它跑到终点！
+- 目标：让小狗逃离被汽车撞到的命运！
 
 像素风格特色：
 - 8位游戏画面
@@ -44,11 +44,18 @@ class PixelCarChaseDogGame:
         self.dog_x = 2.0  # 狗起始位置在前面
         self.dog_y = self.GAME_HEIGHT / 2
 
-        self.car_speed = 0
-        # 让小狗有稳定前进速度并逐渐加速，但不要过快
-        self.base_dog_speed = 0.08
-        self.dog_speed = self.base_dog_speed
-        self.dog_accel = 0.00018
+        # 速度参数
+        self.car_speed = 0.0
+        # 车速稍微慢一点，且会随时间逐渐变快
+        self.min_car_speed = 0.002
+        self.max_car_speed = 0.20
+        self.car_accel = 0.0002  # 车辆时间加速度
+
+        # 小狗速度由音量控制（越大越快）
+        self.dog_min_speed = 0.05
+        self.dog_max_speed = 0.20
+        self.dog_speed = self.dog_min_speed
+
         self.score = 0
         self.game_over = False
         self.game_time = 0
@@ -60,16 +67,13 @@ class PixelCarChaseDogGame:
         self.volume_threshold = 0.0003
         self.max_volume = 0.04
         self.volume_history = [0.0] * 8
-        # 车速稍微慢一点
-        self.min_car_speed = 0.06
-        self.max_car_speed = 0.20
 
         # 摄像机固定在初始画面
         self.prev_camera_left = 0.0
         self.freeze_camera = False
         self.freeze_camera_left = None
 
-        # 终点：小狗的目标线（车需在其到达前抓到）
+        # 终点：小狗的目标线
         self.finish_x = self.GAME_WIDTH - 1.0
         # 规则调整：不要撞到小狗，小狗安全到达终点即胜利
         self.mission_success = False  # True: 小狗安全到达终点
@@ -89,8 +93,6 @@ class PixelCarChaseDogGame:
             'white': '#FFFFFF',
             'black': '#000000',
             'yellow': '#FFFF00',
-            'green': '#00FF00',
-            'pink': '#FF69B4'
         }
 
         # 初始化音频与图形
@@ -398,18 +400,22 @@ class PixelCarChaseDogGame:
     def update_positions(self):
         """更新车辆和狗的位置（车追狗）"""
         volume_level = self.analyze_audio()
-        self.car_speed = self.min_car_speed + (self.max_car_speed - self.min_car_speed) * volume_level
+
+        # 计时（用于车辆加速）
+        self.game_time += 1
+
+        # 车辆速度：随时间逐渐变快，直到最大值
+        self.car_speed = min(self.min_car_speed + self.car_accel * self.game_time, self.max_car_speed)
+
+        # 小狗速度：由音量控制（越大越快）
+        self.dog_speed = self.dog_min_speed + (self.dog_max_speed - self.dog_min_speed) * volume_level
 
         # 前进
         self.car_x += self.car_speed
+        self.dog_x += self.dog_speed
 
         # 限制车辆在赛道内
         self.car_x = max(1, min(self.GAME_WIDTH - 1, self.car_x))
-
-        # 狗前进并加速
-        self.game_time += 1
-        self.dog_speed = self.base_dog_speed + self.game_time * self.dog_accel
-        self.dog_x += self.dog_speed
 
         # 更新像素精灵位置
         self.update_pixel_sprites()
@@ -423,7 +429,7 @@ class PixelCarChaseDogGame:
             self.freeze_camera = True
             if self.freeze_camera_left is None:
                 self.freeze_camera_left = self.prev_camera_left
-            print("�🚫 YOU HIT THE DOG! MISSION FAILED!")
+            print("🚫 THE DOG DIED. MISSION FAILED.")
 
         # 成功：小狗安全到达终点
         if not self.game_over and self.dog_x >= self.finish_x:
@@ -563,7 +569,7 @@ class PixelCarChaseDogGame:
                     self.add_pixel_success_effects()
                 else:
                     game_over_text = (
-                        f"YOU HIT THE DOG!\n\n"
+                        f"THE DOG DIED. MISSION FAILED.\n\n"
                         f"DISTANCE: {self.score:.1f}M\n"
                         f"RATING: {'AWESOME!' if self.score > 500 else 'GREAT!' if self.score > 200 else 'TRY AGAIN!'}\n\n"
                         f"PRESS CTRL+C TO RESTART"
@@ -661,7 +667,8 @@ class PixelCarChaseDogGame:
         """开始游戏"""
         print("🕹️ PIXEL CAR CHASE DOG GAME STARTED!")
         print("💡 8-BIT GAME INSTRUCTIONS:")
-        print("   - MAKE LOUD SOUNDS TO SPEED UP!")
+        print("   - LOUDER = DOG FASTER!")
+        print("   - CAR SPEEDS UP OVER TIME!")
         print("   - DON'T HIT THE DOG!")
         print("   - LET THE DOG REACH THE FINISH SAFELY!")
         print("   - CLOSE WINDOW OR PRESS CTRL+C TO EXIT")
