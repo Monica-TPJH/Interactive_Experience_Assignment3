@@ -63,6 +63,12 @@ class PixelDogChaseGame:
 
         # 初始化摄像机左边界（用于HUD跟随屏幕）
         self.prev_camera_left = 0.0
+        # 当游戏结束时，固定摄像机，不再向右移动，保持原有画面
+        self.freeze_camera = False
+        self.freeze_camera_left = None
+        # 接近终点时提前冻结摄像机（避免临近结束还在移动）
+        self.pre_freeze_lead = 1.2  # 领先距离阈值（单位：米/世界坐标）
+        self.pre_freeze_min_time = 400  # 至少运行这么多帧后才允许提前冻结
 
         # 像素风格色彩
         self.pixel_colors = {
@@ -328,10 +334,11 @@ class PixelDogChaseGame:
         
         self.volume_bg_pixels = self.create_pixel_sprite(6.5, 7.2, volume_bg_pattern, 0.06)
         
-        # 音量条像素（更长更明显）
+        # 音量条像素（严格限制在边框内部，最多100%）
+        # 背景框是25列像素，左右各1列边框 => 内部宽度为23列
         self.volume_pixels = []
-        for i in range(40):  # 40个像素宽的音量条
-            pixel = self.create_pixel_block(6.5 + 0.06 + i * 0.06, 7.2 + 0.06, 
+        for i in range(23):  # 23个像素正好填满内部区域（100%）
+            pixel = self.create_pixel_block(6.5 + 0.06 + i * 0.06, 7.2 + 0.06,
                                           0.06, 'lime')
             pixel.set_alpha(0)  # 初始隐藏
             self.volume_pixels.append(pixel)
@@ -440,9 +447,21 @@ class PixelDogChaseGame:
         # 更新音量指示器
         self.update_volume_display(volume_level)
         
+        # 接近终点时提前冻结摄像机（当领先距离很小且经过一定时间）
+        if not self.freeze_camera and self.game_time >= self.pre_freeze_min_time:
+            lead = self.car_x - self.dog_x
+            if lead <= self.pre_freeze_lead:
+                self.freeze_camera = True
+                if self.freeze_camera_left is None:
+                    self.freeze_camera_left = self.prev_camera_left
+
         # 检查游戏结束条件
         if self.dog_x >= self.car_x:
             self.game_over = True
+            # 触发摄像机冻结，保持当前画面（不再向右移动）
+            self.freeze_camera = True
+            if self.freeze_camera_left is None:
+                self.freeze_camera_left = self.prev_camera_left
             print(f"💔 8-BIT DOG CAUGHT YOU! FINAL SCORE: {self.score}")
     
     def update_pixel_sprites(self):
@@ -511,6 +530,9 @@ class PixelDogChaseGame:
     
     def update_volume_display(self, volume_level):
         """更新音量显示"""
+        # 限制音量在0..1范围（不超过100%）
+        volume_level = max(0.0, min(float(volume_level), 1.0))
+
         # 更新音量条
         active_pixels = int(volume_level * len(self.volume_pixels))
         # 若有声音但映射不足1个像素，则至少点亮1个
@@ -550,11 +572,8 @@ class PixelDogChaseGame:
     
     def update_camera(self):
         """更新摄像机视角，跟随车辆"""
-        # 让摄像机跟随车辆
-        camera_x = self.car_x - 3  # 车辆在屏幕左侧1/4处
-        
-        # 确保摄像机不会超出边界
-        camera_x = max(0, min(camera_x, max(0, self.car_x - 8)))
+        # 固定摄像机在初始画面，不跟随车辆移动
+        camera_x = 0.0
         
         # 在更新xlim前，计算需要同步HUD的平移量（保持HUD相对屏幕位置不变）
         dx = camera_x - self.prev_camera_left
@@ -631,7 +650,7 @@ class PixelDogChaseGame:
             f"SPEED: {self.car_speed*1000:.0f}\n"
             f"DOG: {self.dog_speed*1000:.0f}\n"
             f"LEAD: {distance_diff:.1f}M\n"
-            f"VOL: {volume_level*100:.0f}%  RAW:{raw_vol:.3f}\n"
+            f"VOL: {min(int(round(volume_level*100)), 100)}%  RAW:{raw_vol:.3f}\n"
             f"TIME: {self.game_time//50:.0f}S"
         )
         self.info_text.set_text(info_text)
