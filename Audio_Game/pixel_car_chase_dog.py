@@ -4,9 +4,10 @@ Pixel Car Chase Dog Game - 像素风车追狗游戏
 8-bit style sound-controlled chasing game where you (the car) must catch the dog
 
 控制方式：
-- 声音越大：车辆越快
-- 安静：车辆慢速移动
-- 目标：让小狗逃离被汽车撞到的命运！
+- 声音越大：小狗越快
+- 安静：小狗慢速移动
+- 车辆：会随时间逐渐加速
+- 目标：保护小狗，安全到达终点！
 
 像素风格特色：
 - 8位游戏画面
@@ -33,10 +34,12 @@ class PixelCarChaseDogGame:
         # 游戏参数
         self.GAME_WIDTH = 12
         self.GAME_HEIGHT = 8
-        self.CAR_SIZE = 0.4
-        self.DOG_SIZE = 0.3
+        self.CAR_SIZE = 0.2
+        self.DOG_SIZE = 0.2
         self.PIXEL_SIZE = 0.08  # 像素块大小
-        self.DOG_PIXEL_SIZE = 0.06  # 狗的像素块大小（更小）
+        # 车辆像素大小（相对通用像素放大，车体更大一些）
+        self.CAR_PIXEL_SIZE = self.PIXEL_SIZE * 1.15
+        self.DOG_PIXEL_SIZE = 0.058  # 狗的像素块大小（更大）
 
         # 游戏状态（车在后，小狗在前）
         self.car_x = 0.5  # 车辆起始X位置（左侧更靠后）
@@ -50,10 +53,11 @@ class PixelCarChaseDogGame:
         self.min_car_speed = 0.05
         self.max_car_speed = 0.45
         self.car_accel = 0.0018  # 车辆时间加速度（更快的加速）
-
-        # 小狗速度由音量控制（越大越快）
-        self.dog_min_speed = 0.05
-        self.dog_max_speed = 0.20
+        
+        # 小狗速度由音量控制（越大越快） — 略微降低整体速度并柔化响应
+        self.dog_min_speed = 0.03
+        self.dog_max_speed = 0.14
+        self.dog_speed_exponent = 1.4  # >1 使中低音量时更慢，避免过快
         self.dog_speed = self.dog_min_speed
 
         self.score = 0
@@ -79,7 +83,7 @@ class PixelCarChaseDogGame:
         self.mission_success = False  # True: 小狗安全到达终点
         self.dog_escaped = False      # True: 小狗到达终点
         self.dog_hit = False          # True: 车辆撞到小狗（失败）
-        self.catch_margin = 0.3       # 碰撞判定的间距
+        self.catch_margin = 0.2       # 碰撞判定的间距
 
         # 像素风格色彩
         self.pixel_colors = {
@@ -163,7 +167,7 @@ class PixelCarChaseDogGame:
         self.ax.set_xlim(0, self.GAME_WIDTH)
         self.ax.set_ylim(0, self.GAME_HEIGHT)
         self.ax.set_aspect('equal')
-        self.ax.set_title('🕹️ PIXEL CAR CHASE DOG - 8-BIT EDITION', fontsize=24, fontweight='bold',
+        self.ax.set_title('Dog Run Run Run', fontsize=24, fontweight='bold',
                           color='white', pad=20, family='monospace')
 
         self.fig.patch.set_facecolor('#000033')
@@ -279,12 +283,12 @@ class PixelCarChaseDogGame:
             ['T', 'car_red', 'white', 'white', 'white', 'car_red', 'T'],
             ['car_red', 'white', 'car_blue', 'car_blue', 'car_blue', 'white', 'car_red'],
             ['car_red', 'car_red', 'car_red', 'car_red', 'car_red', 'car_red', 'car_red'],
-            ['T', 'T', 'black', 'T', 'black', 'T', 'T'],
+            ['T', 'black', 'T', 'T', 'T', 'black', 'T'],
         ]
         self.car_pixels = self.create_pixel_sprite(
-            self.car_x - len(car_pattern[0]) * self.PIXEL_SIZE / 2,
-            self.car_y - len(car_pattern) * self.PIXEL_SIZE / 2,
-            car_pattern, self.PIXEL_SIZE
+            self.car_x - len(car_pattern[0]) * self.CAR_PIXEL_SIZE / 2,
+            self.car_y - len(car_pattern) * self.CAR_PIXEL_SIZE / 2,
+            car_pattern, self.CAR_PIXEL_SIZE
         )
 
     def create_pixel_dog(self):
@@ -311,13 +315,17 @@ class PixelCarChaseDogGame:
 
     def create_pixel_ui(self):
         """创建像素风格UI界面"""
+        # 左上角信息框：贴合显示区域，刚好框住信息
+        info_rows, info_cols = 20, 32  # 高度与宽度（边框+内容）
+        info_size = 0.06               # 单元格尺寸
+        info_x, info_y = 0.12, 6.80    # 左下角坐标
         info_bg_pattern = []
-        for y in range(8):
+        for y in range(info_rows):
             row = []
-            for x in range(20):
-                row.append('white' if (y == 0 or y == 7 or x == 0 or x == 19) else 'black')
+            for x in range(info_cols):
+                row.append('white' if (y == 0 or y == info_rows - 1 or x == 0 or x == info_cols - 1) else 'black')
             info_bg_pattern.append(row)
-        self.info_bg_pixels = self.create_pixel_sprite(0.2, 6.5, info_bg_pattern, 0.06)
+        self.info_bg_pixels = self.create_pixel_sprite(info_x, info_y, info_bg_pattern, info_size)
 
         volume_bg_pattern = []
         for y in range(4):
@@ -334,9 +342,14 @@ class PixelCarChaseDogGame:
             pixel.set_alpha(0)
             self.volume_pixels.append(pixel)
 
-        self.info_text = self.ax.text(0.25, 7.7, '', fontsize=10, fontweight='bold',
-                                      color='lime', family='monospace',
-                                      verticalalignment='top')
+        # 信息文字放在边框内，留出一个像素单元的内边距
+        self.info_text = self.ax.text(
+            info_x + info_size * 2.0,
+            info_y + info_rows * info_size - info_size * 3.5,
+            '', fontsize=10, fontweight='bold',
+            color='lime', family='monospace',
+            verticalalignment='top'
+        )
         self.volume_text = self.ax.text(6.6, 7.6, 'VOLUME', fontsize=12, fontweight='bold',
                                         color='yellow', family='monospace')
 
@@ -350,7 +363,7 @@ class PixelCarChaseDogGame:
             ['white', 'white', 'white', 'white'],
             ['T', 'white', 'white', 'T'],
         ]
-        cloud_positions = [(2, 6.5), (5, 7), (8, 6.8), (10, 7.2)]
+        cloud_positions = [(2, 8.5), (5, 7), (8, 6.8), (10, 7.2)]
         self.cloud_pixels = []
         for x, y in cloud_positions:
             clouds = self.create_pixel_sprite(x, y, cloud_pattern, 0.12)
@@ -368,7 +381,7 @@ class PixelCarChaseDogGame:
             flowers = self.create_pixel_sprite(x, y, flower_pattern, 0.08)
             self.flower_pixels.extend(flowers)
 
-        star_positions = [(1, 7.5), (3.5, 7.8), (9.5, 7.6), (11.2, 7.9)]
+        star_positions = [(6, 7.5), (3.5, 7.8), (9.5, 7.6), (11.2, 7.9)]
         self.star_pixels = []
         for x, y in star_positions:
             star = self.create_pixel_block(x, y, 0.1, 'white')
@@ -404,18 +417,20 @@ class PixelCarChaseDogGame:
         # 计时（用于车辆加速）
         self.game_time += 1
 
-        # 车辆速度：随时间逐渐变快，直到最大值
-        self.car_speed = min(self.min_car_speed + self.car_accel * self.game_time, self.max_car_speed)
+        # 车辆速度：随时间逐渐变快，直到最大值（首帧不叠加加速度，避免突兀加速感）
+        effective_time = max(0, self.game_time - 1)
+        self.car_speed = min(self.min_car_speed + self.car_accel * effective_time, self.max_car_speed)
 
-        # 小狗速度：由音量控制（越大越快）
-        self.dog_speed = self.dog_min_speed + (self.dog_max_speed - self.dog_min_speed) * volume_level
+        # 小狗速度：由音量控制（越大越快），应用次线性映射减弱中段速度
+        level_adj = volume_level ** self.dog_speed_exponent
+        self.dog_speed = self.dog_min_speed + (self.dog_max_speed - self.dog_min_speed) * level_adj
 
         # 前进
         self.car_x += self.car_speed
         self.dog_x += self.dog_speed
 
-        # 限制车辆在赛道内
-        self.car_x = max(1, min(self.GAME_WIDTH - 1, self.car_x))
+        # 限制车辆在赛道内（与初始位置一致，避免首帧被强制夹到x=1产生抖动）
+        self.car_x = max(0.5, min(self.GAME_WIDTH - 0.5, self.car_x))
 
         # 更新像素精灵位置
         self.update_pixel_sprites()
@@ -453,12 +468,12 @@ class PixelCarChaseDogGame:
             ['T', 'car_red', 'white', 'white', 'white', 'car_red', 'T'],
             ['car_red', 'white', 'car_blue', 'car_blue', 'car_blue', 'white', 'car_red'],
             ['car_red', 'car_red', 'car_red', 'car_red', 'car_red', 'car_red', 'car_red'],
-            ['T', 'T', 'black', 'T', 'black', 'T', 'T'],
+            ['T', 'black', 'T', 'T', 'T', 'black', 'T'],
         ]
         self.car_pixels = self.create_pixel_sprite(
-            self.car_x - len(car_pattern[0]) * self.PIXEL_SIZE / 2,
-            self.car_y - len(car_pattern) * self.PIXEL_SIZE / 2,
-            car_pattern, self.PIXEL_SIZE
+            self.car_x - len(car_pattern[0]) * self.CAR_PIXEL_SIZE / 2,
+            self.car_y - len(car_pattern) * self.CAR_PIXEL_SIZE / 2,
+            car_pattern, self.CAR_PIXEL_SIZE
         )
 
         # 狗表情在追逐中也变化
