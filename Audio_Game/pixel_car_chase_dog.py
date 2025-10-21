@@ -60,8 +60,9 @@ class PixelCarChaseDogGame:
         self.volume_threshold = 0.0003
         self.max_volume = 0.04
         self.volume_history = [0.0] * 8
-        self.min_car_speed = 0.07
-        self.max_car_speed = 0.22
+        # 车速稍微慢一点
+        self.min_car_speed = 0.06
+        self.max_car_speed = 0.20
 
         # 摄像机固定在初始画面
         self.prev_camera_left = 0.0
@@ -70,9 +71,11 @@ class PixelCarChaseDogGame:
 
         # 终点：小狗的目标线（车需在其到达前抓到）
         self.finish_x = self.GAME_WIDTH - 1.0
-        self.mission_success = False  # True: 抓到小狗
+        # 规则调整：不要撞到小狗，小狗安全到达终点即胜利
+        self.mission_success = False  # True: 小狗安全到达终点
         self.dog_escaped = False      # True: 小狗到达终点
-        self.catch_margin = 0.3       # 抓捕判定的间距
+        self.dog_hit = False          # True: 车辆撞到小狗（失败）
+        self.catch_margin = 0.3       # 碰撞判定的间距
 
         # 像素风格色彩
         self.pixel_colors = {
@@ -412,23 +415,25 @@ class PixelCarChaseDogGame:
         self.update_pixel_sprites()
         self.update_volume_display(volume_level)
 
-        # 成功：车追上狗
+        # 失败：撞到小狗
         if not self.game_over and self.car_x + self.catch_margin >= self.dog_x:
             self.game_over = True
-            self.mission_success = True
+            self.dog_hit = True
+            self.mission_success = False
             self.freeze_camera = True
             if self.freeze_camera_left is None:
                 self.freeze_camera_left = self.prev_camera_left
-            print("🏁🚗 CAUGHT THE DOG! MISSION SUCCESS!")
+            print("�🚫 YOU HIT THE DOG! MISSION FAILED!")
 
-        # 失败：狗到达终点
+        # 成功：小狗安全到达终点
         if not self.game_over and self.dog_x >= self.finish_x:
             self.game_over = True
+            self.mission_success = True
             self.dog_escaped = True
             self.freeze_camera = True
             if self.freeze_camera_left is None:
                 self.freeze_camera_left = self.prev_camera_left
-            print("💨🐶 DOG ESCAPED! TRY AGAIN!")
+            print("🏁🐶 DOG IS SAFE! MISSION SUCCESS!")
 
     def update_pixel_sprites(self):
         """更新像素精灵位置"""
@@ -541,7 +546,7 @@ class PixelCarChaseDogGame:
             if not hasattr(self, 'game_over_displayed'):
                 if getattr(self, 'mission_success', False):
                     success_text = (
-                        f"CAUGHT THE DOG!\n\n"
+                        f"DOG IS SAFE!\n\n"
                         f"DISTANCE: {self.score:.1f}M\n"
                         f"RATING: {'LEGEND!' if self.score > 700 else 'AWESOME!' if self.score > 500 else 'GREAT!'}\n\n"
                         f"PRESS CTRL+C TO RESTART"
@@ -558,7 +563,7 @@ class PixelCarChaseDogGame:
                     self.add_pixel_success_effects()
                 else:
                     game_over_text = (
-                        f"DOG ESCAPED!\n\n"
+                        f"YOU HIT THE DOG!\n\n"
                         f"DISTANCE: {self.score:.1f}M\n"
                         f"RATING: {'AWESOME!' if self.score > 500 else 'GREAT!' if self.score > 200 else 'TRY AGAIN!'}\n\n"
                         f"PRESS CTRL+C TO RESTART"
@@ -599,8 +604,8 @@ class PixelCarChaseDogGame:
         )
         self.info_text.set_text(info_text)
 
-        # 危险提示：小狗接近终点或距离拉大
-        if to_finish < 1.0 or gap > 2.0:
+        # 危险提示：与小狗距离过近，可能发生碰撞
+        if gap < 0.6:
             self.add_pixel_danger_effects()
 
     def add_pixel_game_over_effects(self):
@@ -657,7 +662,8 @@ class PixelCarChaseDogGame:
         print("🕹️ PIXEL CAR CHASE DOG GAME STARTED!")
         print("💡 8-BIT GAME INSTRUCTIONS:")
         print("   - MAKE LOUD SOUNDS TO SPEED UP!")
-        print("   - CATCH THE DOG BEFORE IT REACHES THE FINISH!")
+        print("   - DON'T HIT THE DOG!")
+        print("   - LET THE DOG REACH THE FINISH SAFELY!")
         print("   - CLOSE WINDOW OR PRESS CTRL+C TO EXIT")
         print("=" * 60)
 
