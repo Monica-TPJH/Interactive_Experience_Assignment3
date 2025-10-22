@@ -1,18 +1,3 @@
-#!/usr/bin/env python3
-"""
-Face Avatar Pixel Car Chase Dog Game
-
-功能:
-- 启动前先用摄像头录入人脸, 成功后将人脸转换为像素风头像
-- 识别好的人脸头像显示在游戏右侧区域
-- 必须录入成功后才开始游戏
-
-依赖: opencv-python, numpy, matplotlib, pyaudio (游戏已使用)
-
-用法:
-- 直接运行本文件。摄像头窗口中按 C 键拍摄, 按 Q 键退出
-"""
-
 import time
 from typing import Optional, Tuple
 
