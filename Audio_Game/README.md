@@ -2,7 +2,7 @@
 
 > Inspiration
 >
-> While walking on the street, I sometimes see stray dogs nearly getting hit by cars. It’s heartbreaking. So I made a tiny game where you help a little dog run faster and get away from danger.
+> While walking on the street, I sometimes see stray dogs nearly getting hit by cars. It’s heartbreaking. So I made this game where you help a little dog run faster and get away from danger.
 
 ## Overview
 

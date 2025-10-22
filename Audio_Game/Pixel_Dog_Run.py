@@ -1,21 +1,3 @@
-
-"""
-Pixel Dog Run - 像素风小狗快跑游戏
-8-bit style sound-controlled chasing game where you (the dog) must avoid the car
-
-控制方式：
-- 声音越大：小狗越快
-- 安静：小狗慢速移动
-- 车辆：会随时间逐渐加速
-- 目标：保护小狗，安全到达终点！
-
-像素风格特色：
-- 8位游戏画面
-- 像素化角色和环境
-- 复古色彩搭配
-- 像素化音效提示
-"""
-
 import pyaudio
 import numpy as np
 import matplotlib.pyplot as plt
@@ -730,7 +712,8 @@ class PixelCarChaseDogGame:
             )
             plt.show()
         except KeyboardInterrupt:
-            print("\n👋 PIXEL GAME INTERRUPTED")
+            # 将中断交由上层处理（用于在游戏结束后按 Ctrl+C 触发重开）
+            raise
         finally:
             self.cleanup()
 
@@ -743,27 +726,43 @@ class PixelCarChaseDogGame:
                 self.stream.close()
             if hasattr(self, 'p'):
                 self.p.terminate()
+            # 关闭图形窗口，避免多次重启时累计窗口
+            try:
+                plt.close(self.fig)
+            except Exception:
+                pass
         except Exception as e:
             print(f"CLEANUP ERROR: {e}")
         print("✅ PIXEL CLEANUP COMPLETE!")
 
 
 def main():
-    """主函数"""
-    print("=" * 60)
-    print("🕹️ PIXEL CAR CHASE DOG - 8-BIT EDITION")
-    print("=" * 60)
-    print("LOADING PIXEL WORLD...")
+    """主函数：支持在游戏结束后按 Ctrl+C 快速重开"""
+    while True:
+        print("=" * 60)
+        print("🕹️ PIXEL CAR CHASE DOG - 8-BIT EDITION")
+        print("=" * 60)
+        print("LOADING PIXEL WORLD...")
 
-    try:
-        game = PixelCarChaseDogGame()
-        game.start_game()
-    except KeyboardInterrupt:
-        print("\nPIXEL GAME INTERRUPTED")
-    except Exception as e:
-        print(f"PIXEL GAME ERROR: {e}")
-        import traceback
-        traceback.print_exc()
+        game = None
+        try:
+            game = PixelCarChaseDogGame()
+            game.start_game()
+            # 若窗口正常关闭或未被中断，退出循环
+            break
+        except KeyboardInterrupt:
+            # 只有当游戏已经结束（胜利或失败）时，使用 Ctrl+C 触发重开
+            if game is not None and getattr(game, 'game_over', False):
+                print("\n🔁 RESTARTING GAME (Ctrl+C after game over)...")
+                continue
+            else:
+                print("\nPIXEL GAME INTERRUPTED")
+                break
+        except Exception as e:
+            print(f"PIXEL GAME ERROR: {e}")
+            import traceback
+            traceback.print_exc()
+            break
 
 
 if __name__ == "__main__":
