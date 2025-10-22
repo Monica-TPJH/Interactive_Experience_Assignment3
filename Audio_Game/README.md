@@ -20,9 +20,12 @@ Pixel Dog Run is an 8-bit style, sound-controlled chasing game. You are protecti
 - Quiet → dog moves slowly
 - The car always speeds up over time
 - Goal: let the dog reach the checkered finish line safely
-![alt text](images/Win.png)
+  
+  ![Mission completed overlay](images/Win.png)
+
 - If the car catches the dog: "THE DOG DIED. MISSION FAILED."
-  ![alt text](images/Win.png)
+  
+  ![Mission failed overlay](images/Fail.png)
 
 
 
