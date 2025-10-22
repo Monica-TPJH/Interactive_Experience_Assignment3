@@ -18,7 +18,8 @@ st.set_page_config(
 
 # Default appearance settings used by background CSS
 if "bg_opacity" not in st.session_state:
-    st.session_state["bg_opacity"] = 0.3  # initial default opacity (lighter background)
+    # Initial default opacity (70% background strength)
+    st.session_state["bg_opacity"] = 0.7
 if "bg_fit" not in st.session_state:
     # How the background image scales:
     # - "cover": fill screen, may crop (default)
