@@ -20,7 +20,13 @@ Pixel Dog Run is an 8-bit style, sound-controlled chasing game. You are protecti
 - Quiet → dog moves slowly
 - The car always speeds up over time
 - Goal: let the dog reach the checkered finish line safely
+  
+  ![Mission completed overlay](images/mission-completed.png)
+
 - If the car catches the dog: "THE DOG DIED. MISSION FAILED."
+  
+  ![Mission failed overlay](images/mission-failed.png)
+
 
 HUD shows:
 - Distance (score)
@@ -35,8 +41,7 @@ HUD shows:
 2. Install dependencies (PyAudio can be tricky on macOS; use the provided requirements files if needed).
 
 Common sets in this repo:
-- `week06/requirements.txt` (audio/signal stack)
-- Or install manually:
+install manually:
   - numpy
   - matplotlib
   - pyaudio
@@ -58,13 +63,18 @@ If PyAudio errors occur on the system Python, use the repo's virtual environment
 
 ## Controls & Difficulty
 
-- Audio sensitivity is tuned to avoid reacting to small background noise
-- Dog speed grows sublinearly with volume so it feels stable
-- The car has an early acceleration phase and a stronger late-game phase
-- You can tweak difficulty in `Pixel_Dog_Run.py`:
-  - Audio sensitivity: `volume_threshold`, `max_volume`, `volume_history` length
-  - Dog speed: `dog_min_speed`, `dog_max_speed`, `dog_speed_exponent`
-  - Car speed: `min_car_speed`, `max_car_speed`, `car_accel`, `late_car_accel`, `late_game_frames`
+- Controls
+  - Restart (after game over): Ctrl+C
+  - Tip: if keys don’t respond, click the game window once to focus it
+
+- Difficulty & tuning
+  - Audio sensitivity is tuned to ignore small background noise
+  - Dog speed grows sublinearly with volume so it feels stable
+  - The car has an early acceleration phase and a stronger late-game phase
+  - You can tweak difficulty in `Pixel_Dog_Run.py`:
+    - Audio sensitivity: `volume_threshold`, `max_volume`, `volume_history` length
+    - Dog speed: `dog_min_speed`, `dog_max_speed`, `dog_speed_exponent`
+    - Car speed: `min_car_speed`, `max_car_speed`, `car_accel`, `late_car_accel`, `late_game_frames`
 
 ## Face Avatar Mode
 
@@ -89,6 +99,9 @@ Tips on macOS:
 - PyAudio missing: install inside the project virtual env
 - Input device errors: ensure a microphone is available and not used by another app
 - Webcam errors: ensure permissions are granted; try the image fallback
+- Ctrl+C doesn’t restart: use in-window keys (R/Enter/Space) after you see the game-over overlay; make sure the window is focused
+- No movement from audio: raise your voice above the threshold; adjust `volume_threshold` or `max_volume` in the code if needed
+
 
 ## License
 
