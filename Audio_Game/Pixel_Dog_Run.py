@@ -70,6 +70,10 @@ class PixelCarChaseDogGame:
         self.dog_hit = False          # True: 车辆撞到小狗（失败）
         self.catch_margin = 0.2       # 碰撞判定的间距
 
+        # 重开/退出请求标记（用于图形窗口按键触发）
+        self.request_restart = False
+        self.request_quit = False
+
         # 像素风格色彩
         self.pixel_colors = {
             'sky': '#87CEEB',
@@ -170,7 +174,39 @@ class PixelCarChaseDogGame:
         self.create_pixel_ui()
         self.add_pixel_decorations()
 
+        # 绑定按键事件（在窗口内按 R 或 Ctrl+C 重开；按 Q 退出）
+        try:
+            self.fig.canvas.mpl_connect('key_press_event', self.on_key_press)
+        except Exception:
+            pass
+
         plt.tight_layout()
+
+    def on_key_press(self, event):
+        """处理窗口内按键（用于重开或退出）"""
+        try:
+            key = (event.key or '').lower()
+        except Exception:
+            key = ''
+
+        # 任何时刻按 Q/ESC 关闭窗口（退出）
+        if key in ('q', 'escape'):
+            self.request_quit = True
+            try:
+                plt.close(self.fig)
+            except Exception:
+                pass
+            return
+
+        # 只有在游戏结束后才允许重开
+        if getattr(self, 'game_over', False):
+            # Matplotlib 常见按键字符串：'ctrl+c'、'r'、'enter'、'return', ' '（空格）
+            if key in ('r', 'enter', 'return', ' ' ) or key == 'ctrl+c' or key == 'cmd+c':
+                self.request_restart = True
+                try:
+                    plt.close(self.fig)
+                except Exception:
+                    pass
 
     def create_pixel_block(self, x, y, size, color, edge_color=None, linewidth=1, antialiased=None):
         """创建单个像素块
@@ -587,7 +623,7 @@ class PixelCarChaseDogGame:
                         f"DOG IS SAFE!\n\n"
                         f"DISTANCE: {self.score:.1f}M\n"
                         f"RATING: {'LEGEND!' if self.score > 700 else 'AWESOME!' if self.score > 500 else 'GREAT!'}\n\n"
-                        f"PRESS CTRL+C TO RESTART"
+                        f"PRESS CTRL+C OR R TO RESTART"
                     )
                     self.game_over_text = self.ax.text(
                         self.car_x, self.GAME_HEIGHT/2,
@@ -604,7 +640,7 @@ class PixelCarChaseDogGame:
                         f"THE DOG DIED. MISSION FAILED.\n\n"
                         f"DISTANCE: {self.score:.1f}M\n"
                         f"RATING: {'AWESOME!' if self.score > 500 else 'GREAT!' if self.score > 200 else 'TRY AGAIN!'}\n\n"
-                        f"PRESS CTRL+C TO RESTART"
+                        f"PRESS CTRL+C OR R TO RESTART"
                     )
                     self.game_over_text = self.ax.text(
                         self.car_x, self.GAME_HEIGHT/2,
@@ -748,7 +784,14 @@ def main():
         try:
             game = PixelCarChaseDogGame()
             game.start_game()
-            # 若窗口正常关闭或未被中断，退出循环
+            # 根据窗口内按键请求判断是否重开或退出
+            if getattr(game, 'request_restart', False):
+                print("\n🔁 RESTARTING GAME (window: R/Enter/Space/Ctrl+C)...")
+                continue
+            if getattr(game, 'request_quit', False):
+                print("\nPIXEL GAME QUIT")
+                break
+            # 未请求重开则退出循环
             break
         except KeyboardInterrupt:
             # 只有当游戏已经结束（胜利或失败）时，使用 Ctrl+C 触发重开
