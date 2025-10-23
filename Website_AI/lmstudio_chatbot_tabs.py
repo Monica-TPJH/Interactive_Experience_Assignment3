@@ -18,67 +18,51 @@ st.set_page_config(
 
 # Default appearance settings used by background CSS
 if "bg_opacity" not in st.session_state:
-    # Initial default opacity (70% background strength)
-    st.session_state["bg_opacity"] = 0.7
+    # Default to fully visible background for a clean white look
+    st.session_state["bg_opacity"] = 1.0
 if "bg_fit" not in st.session_state:
-    # How the background image scales:
-    # - "cover": fill screen, may crop (default)
-    # - "contain": show entire image, may leave bars
+    # Start with "contain" to avoid cropping the Snoopy artwork
+    # Options:
+    # - "cover": fill screen, may crop
+    # - "contain": show entire image, may add bars (default)
     # - "100% 100%": stretch to fill exactly (may distort)
-    st.session_state["bg_fit"] = "cover"
+    st.session_state["bg_fit"] = "contain"
 
 # -----------------------------
 # Global background styling (light base with Snoopy image)
 # -----------------------------
 BACKGROUND_IMAGE_URL = (
-    "https://www.xtrafondos.com/wallpapers/charlie-brown-y-snoopy-12601.jpg"
+    "https://wallpapers.com/images/hd/lazy-snoopy-right-side-q50siadzjetfbapp.webp"
 )
 
-# Local cache path for background image
+# Project assets directory (used for audio, etc.)
 _APP_DIR = Path(__file__).parent
 _ASSETS_DIR = _APP_DIR / "assets"
 _ASSETS_DIR.mkdir(parents=True, exist_ok=True)
-_LOCAL_BG_PATH = _ASSETS_DIR / "background.jpg"
 
 # Audio file types supported for local playback
 _ALLOWED_AUDIO_SUFFIXES = [".mp3", ".wav", ".ogg", ".m4a"]
 
-# Resolve background image as a data URI with local-cache preference
+# Resolve background image with a remote-only strategy so the new default
+# is always shown on first load. We do not read or write any local file.
 bg_image_css = None
 try:
-    if _LOCAL_BG_PATH.exists():
-        with _LOCAL_BG_PATH.open("rb") as f:
-            data = f.read()
+    req = Request(
+        BACKGROUND_IMAGE_URL,
+        headers={
+            "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
+            "Referer": "https://wallpapers.com/",
+            "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
+        },
+    )
+    with urlopen(req, timeout=8) as resp:
+        data = resp.read()
+        content_type = resp.headers.get("Content-Type") or "image/jpeg"
         b64 = base64.b64encode(data).decode("utf-8")
-        bg_image_css = f"url('data:image/jpeg;base64,{b64}')"
+        bg_image_css = f"url('data:{content_type};base64,{b64}')"
 except Exception:
-    pass
-
-if bg_image_css is None:
-    # Try to fetch remotely and cache locally
-    try:
-        req = Request(
-            BACKGROUND_IMAGE_URL,
-            headers={
-                "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0.0.0 Safari/537.36",
-                "Referer": "https://www.xtrafondos.com/",
-                "Accept": "image/avif,image/webp,image/apng,image/*,*/*;q=0.8",
-            },
-        )
-        with urlopen(req, timeout=6) as resp:
-            data = resp.read()
-            # Cache for future runs
-            try:
-                with _LOCAL_BG_PATH.open("wb") as f:
-                    f.write(data)
-            except Exception:
-                pass
-            content_type = resp.headers.get("Content-Type") or "image/jpeg"
-            b64 = base64.b64encode(data).decode("utf-8")
-            bg_image_css = f"url('data:{content_type};base64,{b64}')"
-    except Exception:
-        # Fallback to using the direct URL if all else fails
-        bg_image_css = f"url('{BACKGROUND_IMAGE_URL}')"
+    # Fallback to using the direct URL if the fetch fails
+    bg_image_css = f"url('{BACKGROUND_IMAGE_URL}')"
 
 # If user provided a custom background this session, prefer it
 custom_b64 = st.session_state.get("custom_bg_b64")
@@ -292,13 +276,9 @@ with st.sidebar.expander("🎨 Appearance"):
     if uploaded_bg is not None:
         if st.button("Use this background"):
             data = uploaded_bg.read()
-            try:
-                with _LOCAL_BG_PATH.open("wb") as f:
-                    f.write(data)
-            except Exception:
-                pass
+            # Do not persist to disk; only use in-session override.
             st.session_state["custom_bg_b64"] = base64.b64encode(data).decode("utf-8")
-            st.success("Background updated!")
+            st.success("Background updated for this session!")
             st.rerun()
 
 # Chat Sessions Management
