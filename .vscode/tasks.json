@@ -1,0 +1,85 @@
+{
+	"version": "2.0.0",
+	"tasks": [
+		{
+			"label": "Run Streamlit Website_AI app",
+			"type": "shell",
+			"command": "/Users/tanpujiahui/Interactive_Experience_Assignment3-1/.venv/bin/python",
+			"args": [
+				"-m",
+				"streamlit",
+				"run",
+				"/Users/tanpujiahui/Interactive_Experience_Assignment3-1/Website_AI/lmstudio_chatbot_tabs.py",
+				"--server.headless",
+				"true",
+				"--server.port",
+				"8501"
+			],
+			"isBackground": true,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Run Streamlit Website_AI app",
+			"type": "shell",
+			"command": "/Users/tanpujiahui/Interactive_Experience_Assignment3-1/.venv/bin/python",
+			"args": [
+				"-m",
+				"streamlit",
+				"run",
+				"/Users/tanpujiahui/Interactive_Experience_Assignment3-1/Website_AI/lmstudio_chatbot_tabs.py",
+				"--server.headless",
+				"true",
+				"--server.port",
+				"8501"
+			],
+			"isBackground": true,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Run Streamlit Website_AI app",
+			"type": "shell",
+			"command": "/Users/tanpujiahui/Interactive_Experience_Assignment3-1/.venv/bin/python",
+			"args": [
+				"-m",
+				"streamlit",
+				"run",
+				"/Users/tanpujiahui/Interactive_Experience_Assignment3-1/Website_AI/lmstudio_chatbot_tabs.py",
+				"--server.headless",
+				"true",
+				"--server.port",
+				"8501"
+			],
+			"isBackground": true,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "build"
+		},
+		{
+			"label": "Run Streamlit Website_AI app",
+			"type": "shell",
+			"command": "/Users/tanpujiahui/Interactive_Experience_Assignment3-1/.venv/bin/python",
+			"args": [
+				"-m",
+				"streamlit",
+				"run",
+				"/Users/tanpujiahui/Interactive_Experience_Assignment3-1/Website_AI/lmstudio_chatbot_tabs.py",
+				"--server.headless",
+				"true",
+				"--server.port",
+				"8501"
+			],
+			"isBackground": true,
+			"problemMatcher": [
+				"$eslint-stylish"
+			],
+			"group": "build"
+		}
+	]
+}
