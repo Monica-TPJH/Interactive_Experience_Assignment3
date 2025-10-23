@@ -21,12 +21,12 @@ if "bg_opacity" not in st.session_state:
     # Default to fully visible background for a clean white look
     st.session_state["bg_opacity"] = 1.0
 if "bg_fit" not in st.session_state:
-    # Fill the entire screen by default
+    # Start with "contain" to avoid cropping the Snoopy artwork
     # Options:
-    # - "cover": fill screen, may crop (default)
-    # - "contain": show entire image, may add bars
+    # - "cover": fill screen, may crop
+    # - "contain": show entire image, may add bars (default)
     # - "100% 100%": stretch to fill exactly (may distort)
-    st.session_state["bg_fit"] = "cover"
+    st.session_state["bg_fit"] = "contain"
 
 # -----------------------------
 # Global background styling (light base with Snoopy image)
@@ -98,12 +98,12 @@ st.markdown(
     }}
 
     /* Solid top header (not transparent) */
-    [data-testid="stHeader"] {{
+    [data-testid="stHeader"] {
         background: #ffffff !important;
         box-shadow: 0 1px 4px rgba(0,0,0,0.06);
         border-bottom: 1px solid rgba(0,0,0,0.06);
         backdrop-filter: none !important;
-    }}
+    }
 
     /* Lighten the sidebar area for readability */
     [data-testid="stSidebar"] > div:first-child {{
