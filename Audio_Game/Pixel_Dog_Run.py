@@ -1,3 +1,5 @@
+import sys
+
 try:
     import pyaudio
 except ModuleNotFoundError:
@@ -10,6 +12,7 @@ except ModuleNotFoundError:
     print("     ./.venv/bin/python Audio_Game/Pixel_Dog_Run.py")
     print("  3) On macOS you may need portaudio: brew install portaudio && pip install pyaudio")
     sys.exit(1)
+
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
