@@ -2,6 +2,12 @@
 
 An interactive Streamlit app with multiple tabs (Chat, Music, Video, Game, Article, Fortune). It’s designed to work with an LM Studio-compatible OpenAI API endpoint and includes playful Snoopy-themed styling.
 
+## Overview
+
+![Snoopy's Playground – Overview](./assets/overview.png)
+
+The app features a clean white theme, a full-page Snoopy background, and a left sidebar for robot selection, appearance settings, chat sessions, and server configuration.
+
 ## Features
 
 - Chat with multiple “robot” personas (General Assistant, Code Expert, Creative Writer, Fortune Teller, Teacher)
@@ -10,7 +16,7 @@ An interactive Streamlit app with multiple tabs (Chat, Music, Video, Game, Artic
 - Mini game: Snoopy's Gold Miner (simple click-to-mine game with score/level/time)
 - Fortune tab for daily fortune and tarot card draws
 - Article writer with adjustable word count and tone
-- Customizable background image, scaling mode, and opacity (default 70%)
+- Customizable background image, scaling mode, and opacity (default 100%)
 
 ## Requirements
 
@@ -62,13 +68,19 @@ Make sure LM Studio is running and serving an OpenAI-compatible endpoint on the 
 ## Background Customization
 
 Sidebar → Appearance:
-- Upload a custom image (stored locally at `Website_AI/assets/background.jpg`)
-- Adjust background opacity (default 0.7) and scaling mode (cover/contain/stretch)
+- Default background uses a remote Snoopy image URL. On first load it shows immediately without any local file.
+- Upload a custom image to override the background for the current session (not saved to disk).
+- Adjust background opacity (default 1.0) and scaling mode:
+	- Cover (fill screen, may crop) — default
+	- Contain (show whole image, may add bars)
+	- Stretch (100% 100%, may distort)
 
 ## Local Assets
 
 - Audio files you upload in the Music tab are stored in `Website_AI/assets/`.
 - You can also manually drop supported audio files there: `.mp3`, `.wav`, `.ogg`, `.m4a`.
+
+Note: The background image is not cached locally anymore. The default is remote-only, and custom uploads are session-only.
 
 ## Troubleshooting
 
