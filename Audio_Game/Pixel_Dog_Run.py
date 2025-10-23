@@ -1,4 +1,15 @@
-import pyaudio
+try:
+    import pyaudio
+except ModuleNotFoundError:
+    # Friendly message when pyaudio isn't installed in the Python environment
+    print("ERROR: the 'pyaudio' package is not installed in this Python interpreter.")
+    print("Options to fix:")
+    print("  1) Activate the project's virtual environment and run: source .venv/bin/activate")
+    print("     then: pip install pyaudio")
+    print("  2) Or run the script with the project's venv directly:")
+    print("     ./.venv/bin/python Audio_Game/Pixel_Dog_Run.py")
+    print("  3) On macOS you may need portaudio: brew install portaudio && pip install pyaudio")
+    sys.exit(1)
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib.animation as animation
