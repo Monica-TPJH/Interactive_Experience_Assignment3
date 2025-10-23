@@ -98,12 +98,12 @@ st.markdown(
     }}
 
     /* Solid top header (not transparent) */
-    [data-testid="stHeader"] {{
+    [data-testid="stHeader"] {
         background: #ffffff !important;
         box-shadow: 0 1px 4px rgba(0,0,0,0.06);
         border-bottom: 1px solid rgba(0,0,0,0.06);
         backdrop-filter: none !important;
-    }}
+    }
 
     /* Lighten the sidebar area for readability */
     [data-testid="stSidebar"] > div:first-child {{
