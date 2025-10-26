@@ -55,7 +55,7 @@ Troubleshooting
 
 - Entry: `Website_AI/Snoopy_Chatbot.py`
 - Features: Chat (multiple personas), Music (local playback), Video embedding, Mini-game, Fortune, Article writer
-![Overview](./assets/Website.png)
+![Overview](Website_AI/assets/Website.png)
 
 Run (from repo root):
 
