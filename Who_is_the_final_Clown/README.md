@@ -2,7 +2,7 @@
 
 This small project is a playful, classroom exercise that recreates a party-style "truth-or-dare" selection mechanic: players take turns, and when someone is chosen to be the "final clown" they must accept a light-hearted penalty (a dare, a small performance, or a silly task).
 
-The idea for this exercise came from social gatherings — specifically the classic party game where a selected person must perform a challenge or receive a friendly punishment. The implementation here is intentionally simple and made for learning: it focuses on game flow, UI, and event handling rather than complex graphics or networking.
+The idea for this exercise came from social gatherings — specifically the classic party game where a selected person must perform a challenge or receive a friendly punishment.
 
 ## Purpose
 
