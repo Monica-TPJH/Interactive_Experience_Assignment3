@@ -45,7 +45,7 @@ The app will start at:
 
 Screenshot (first load with default cover background):
 
-![Overview](./assets/overview.png)
+![Overview](./Website.png)
 
 ## LM Studio / API Setup
 
