@@ -72,6 +72,24 @@ Tips
 - Background customization in sidebar (image/fit/opacity). The app now uses a remote Snoopy image by default and the default fit is `cover` (fills the screen; may crop the image). Use the "Reset appearance defaults" button in the Appearance panel to restore cover + full opacity for your session.
 - Install `watchdog` for faster Streamlit reloads
 
+### 3) Who is the Final Clown
+
+- Idea: A social-party-style selection game inspired by "truth-or-dare" — when someone is chosen as the "final clown" they accept a playful penalty (a dare, a short performance, or a silly task).
+- Entry: `Who_is_the_final_Clown/10_clown_game.py`
+- Notes: This was created as an in-class exercise to practice event-driven programming, face detection overlays, and UI feedback. It may use MediaPipe for face detection and expects a camera device.
+
+Run (from repo root):
+
+```bash
+# Quick test (capture one frame and save annotated output):
+./.venv/bin/python Who_is_the_final_Clown/10_clown_game.py --test
+
+# Full interactive run (opens a window and selects among detected faces):
+./.venv/bin/python Who_is_the_final_Clown/10_clown_game.py
+```
+
+See `Who_is_the_final_Clown/README.md` for more details and an embedded demonstration GIF.
+
 ## Development
 
 - Python 3.9+
