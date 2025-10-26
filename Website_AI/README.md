@@ -31,11 +31,11 @@ pip install watchdog
 From the repository root:
 
 ```bash
-# Using your current Python
-streamlit run Website_AI/lmstudio_chatbot_tabs.py
+# Using your current Python (updated filename)
+streamlit run Website_AI/Snoopy_Chatbot.py
 
 # Or explicitly via a venv (example)
-./.venv/bin/python -m streamlit run Website_AI/lmstudio_chatbot_tabs.py
+./.venv/bin/python -m streamlit run Website_AI/Snoopy_Chatbot.py
 ```
 
 The app will start at:
@@ -62,8 +62,9 @@ Make sure LM Studio is running and serving an OpenAI-compatible endpoint on the 
 ## Background Customization
 
 Sidebar → Appearance:
-- Upload a custom image (stored locally at `Website_AI/assets/background.jpg`)
-- Adjust background opacity (default 0.7) and scaling mode (cover/contain/stretch)
+- The app now uses a remote Snoopy image as the default background and the default scaling mode is `cover` (fills the screen; may crop the image).
+- Upload a custom image (session-only override; does not persist across sessions) or adjust opacity and scaling mode.
+- There is a "Reset appearance defaults" button in the Appearance panel which sets the scaling to `cover`, opacity to full (1.0), and clears any session custom background so the remote default shows.
 
 ## Local Assets
 
