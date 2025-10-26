@@ -12,7 +12,7 @@ The idea for this exercise came from social gatherings — specifically the clas
 
 ## How it works
 
-- Players are listed and a selection mechanism (random pick / wheel / countdown) determines who is chosen.
+- Players (at least 3) are listed and a selection mechanism (random pick / wheel / countdown) determines who is chosen.
 - The chosen player is marked the "final clown" and the UI prompts for a punishment (dare) or an action to complete.
 - After the action is completed or skipped, the game can continue or end.
 
@@ -31,5 +31,7 @@ python Who_is_the_final_Clown/10_clown_game.py
 ![Clown GIF](https://media.giphy.com/media/3oEjI6SIIHBdRxXI40/giphy.gif)
 
 ---
+
+Recommended — create a Python 3.11 venv and install mediapipe (macOS)
 
 If you'd like a different GIF or to include a local animation inside the repository, tell me which file or style you prefer and I'll update the README accordingly.
