@@ -21,12 +21,12 @@ if "bg_opacity" not in st.session_state:
     # Default to fully visible background for a clean white look
     st.session_state["bg_opacity"] = 1.0
 if "bg_fit" not in st.session_state:
-    # Start with "contain" to avoid cropping the Snoopy artwork
+    # Default to "cover" so the background fills the page on first load
     # Options:
-    # - "cover": fill screen, may crop
-    # - "contain": show entire image, may add bars (default)
+    # - "cover": fill screen, may crop (default)
+    # - "contain": show entire image, may add bars
     # - "100% 100%": stretch to fill exactly (may distort)
-    st.session_state["bg_fit"] = "contain"
+    st.session_state["bg_fit"] = "cover"
 
 # -----------------------------
 # Global background styling (light base with Snoopy image)
@@ -98,12 +98,12 @@ st.markdown(
     }}
 
     /* Solid top header (not transparent) */
-    [data-testid="stHeader"] {
+    [data-testid="stHeader"] {{
         background: #ffffff !important;
         box-shadow: 0 1px 4px rgba(0,0,0,0.06);
         border-bottom: 1px solid rgba(0,0,0,0.06);
         backdrop-filter: none !important;
-    }
+    }}
 
     /* Lighten the sidebar area for readability */
     [data-testid="stSidebar"] > div:first-child {{
@@ -283,6 +283,15 @@ with st.sidebar.expander("🎨 Appearance"):
             st.session_state["custom_bg_b64"] = base64.b64encode(data).decode("utf-8")
             st.success("Background updated for this session!")
             st.rerun()
+    # Quick reset button to apply recommended defaults immediately
+    if st.button("Reset appearance defaults"):
+        st.session_state["bg_fit"] = "cover"
+        st.session_state["bg_opacity"] = 1.0
+        # Clear any custom background for the session so the remote default shows
+        if "custom_bg_b64" in st.session_state:
+            del st.session_state["custom_bg_b64"]
+        st.success("Appearance reset to defaults (cover + full opacity).")
+        st.rerun()
 
 # Chat Sessions Management
 st.sidebar.markdown("### 💬 Chat Sessions")
