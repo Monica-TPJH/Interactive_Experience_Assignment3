@@ -41,6 +41,12 @@ streamlit run Website_AI/Snoopy_Chatbot.py
 The app will start at:
 - Local URL: http://localhost:8501
 
+## Overview
+
+Screenshot (first load with default cover background):
+
+![Overview](./assets/overview.png)
+
 ## LM Studio / API Setup
 
 In the sidebar under “⚙️ Server Configuration”:
