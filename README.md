@@ -92,7 +92,7 @@ See `Who_is_the_final_Clown/README.md` for more details and an embedded demonstr
 
 ## Development
 
-- Python 3.9+
+- Recommended — create a Python 3.11 venv
 - Recommended: use a virtual environment and install per-app requirements as needed
 
 ## License
