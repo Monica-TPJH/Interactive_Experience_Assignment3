@@ -17,7 +17,7 @@ Interactive_Experience_Assignment3/
 │       ├── Win.png      # success overlay screenshot
 │       └── Fail.png     # failure overlay screenshot
 └── Website_AI/          # Streamlit app (LM Studio compatible)
-    ├── lmstudio_chatbot_tabs.py
+    ├── Snoopy_Chatbot.py
     ├── README.md
     └── assets/
         └── background.jpg (optional)
@@ -53,13 +53,13 @@ Troubleshooting
 
 ### 2) Website AI (Snoopy's Playground)
 
-- Entry: `Website_AI/lmstudio_chatbot_tabs.py`
+- Entry: `Website_AI/Snoopy_Chatbot.py`
 - Features: Chat (multiple personas), Music (local playback), Video embedding, Mini-game, Fortune, Article writer
 
 Run (from repo root):
 
 ```bash
-./.venv/bin/python -m streamlit run Website_AI/lmstudio_chatbot_tabs.py
+./.venv/bin/python -m streamlit run Website_AI/Snoopy_Chatbot.py
 ```
 
 LM Studio settings (in sidebar)
@@ -68,7 +68,7 @@ LM Studio settings (in sidebar)
 - Model: e.g. `lmstudio-community/Meta-Llama-3-8B-Instruct-GGUF`
 
 Tips
-- Background customization in sidebar (image/fit/opacity, default 70%)
+- Background customization in sidebar (image/fit/opacity). The app now uses a remote Snoopy image by default and the default fit is `cover` (fills the screen; may crop the image). Use the "Reset appearance defaults" button in the Appearance panel to restore cover + full opacity for your session.
 - Install `watchdog` for faster Streamlit reloads
 
 ## Development
