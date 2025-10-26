@@ -26,10 +26,6 @@ python Who_is_the_final_Clown/10_clown_game.py
 
 (You may need to use the repo virtualenv to satisfy any dependencies.)
 
-## Classroom note
-
-This project was created as a short in-class exercise. It was inspired by social party games where people take turns and the group playfully selects someone for a small challenge. The goal was to learn event-driven programming and UI feedback while keeping the concept familiar and relatable.
-
 ## GIF
 
 ![Clown GIF](https://media.giphy.com/media/3oEjI6SIIHBdRxXI40/giphy.gif)
